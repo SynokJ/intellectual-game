@@ -8,6 +8,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using static IntellectualGame.EditorTools.BuilderUtils;
 
 namespace IntellectualGame.EditorTools
 {
@@ -21,8 +22,6 @@ namespace IntellectualGame.EditorTools
         const string SpritesFolder = "Assets/_Project/MiniGames/Yurta/Art";
         const string LevelPath = "Assets/_Project/MiniGames/Yurta/Data/YurtaLevel01.asset";
         const string MarkerPath = "Library/YurtaSceneBuilt.txt";
-
-        static readonly Color Ink = new Color(0.12f, 0.16f, 0.27f);
 
         [MenuItem("Tools/Yurta/Build Scene")]
         static void BuildFromMenu() => Build();
@@ -43,7 +42,7 @@ namespace IntellectualGame.EditorTools
             Directory.CreateDirectory(Path.GetDirectoryName(LevelPath));
             Directory.CreateDirectory(SpritesFolder);
 
-            var sprites = CreateSprites();
+            var sprites = CreateSprites(SpritesFolder);
             CreateLevel();
 
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
@@ -99,6 +98,7 @@ namespace IntellectualGame.EditorTools
             {
                 so.FindProperty("level").objectReferenceValue = AssetDatabase.LoadAssetAtPath<YurtaLevelData>(LevelPath);
                 so.FindProperty("view").objectReferenceValue = view;
+                so.FindProperty("menuNumber").intValue = 1;
             });
             Assign(view, so =>
             {
@@ -114,7 +114,6 @@ namespace IntellectualGame.EditorTools
             var controller = controllerObject.AddComponent<GameController>();
             Assign(controller, so =>
             {
-                SetArray(so.FindProperty("games"), GamesFor(numberButtons.Count, game));
                 SetArray(so.FindProperty("numberButtons"), numberButtons.ToArray());
                 so.FindProperty("hintText").objectReferenceValue = hint;
                 so.FindProperty("quitButton").objectReferenceValue = quit;
@@ -136,13 +135,6 @@ namespace IntellectualGame.EditorTools
             EnsureInBuildSettings();
             File.WriteAllText(MarkerPath, DateTime.Now.ToString("o"));
             Debug.Log("Yurta scene built. Press Play and click button 1.");
-        }
-
-        static Game[] GamesFor(int count, Game yurta)
-        {
-            var games = new Game[count];
-            games[0] = yurta;
-            return games;
         }
 
         static void RemoveOld(Scene scene)
@@ -236,81 +228,6 @@ namespace IntellectualGame.EditorTools
             return world;
         }
 
-        static Transform Group(string name, Transform parent, Vector2 center)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.transform.position = center;
-            return go.transform;
-        }
-
-        static void Shape(Transform parent, string name, Sprite sprite, Vector2 worldPos, Vector2 size, Color color,
-            int order, float rotation = 0f)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.transform.position = worldPos;
-            go.transform.rotation = Quaternion.Euler(0f, 0f, rotation);
-            go.transform.localScale = new Vector3(size.x, size.y, 1f);
-            var renderer = go.AddComponent<SpriteRenderer>();
-            renderer.sprite = sprite;
-            renderer.color = color;
-            renderer.sortingOrder = order;
-        }
-
-        // ---------- sprites ----------
-
-        static Dictionary<string, Sprite> CreateSprites()
-        {
-            const int size = 128;
-            var result = new Dictionary<string, Sprite>
-            {
-                ["Square"] = MakeSprite("Square", size, size, (x, y) => 1f, SpriteAlignment.Center),
-                ["Circle"] = MakeSprite("Circle", size, size, (x, y) =>
-                    Mathf.Clamp01(size / 2f - Vector2.Distance(new Vector2(x, y), new Vector2(size / 2f, size / 2f)) + 0.5f),
-                    SpriteAlignment.Center),
-                ["HalfCircle"] = MakeSprite("HalfCircle", size, size / 2, (x, y) =>
-                    Mathf.Clamp01(size / 2f - Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(size / 2f, 0f)) + 0.5f),
-                    SpriteAlignment.BottomCenter),
-                ["Triangle"] = MakeSprite("Triangle", size, size, (x, y) =>
-                    Mathf.Clamp01((size / 2f) * (1f - (y + 0.5f) / size) - Mathf.Abs(x + 0.5f - size / 2f) + 0.5f),
-                    SpriteAlignment.BottomCenter),
-            };
-            return result;
-        }
-
-        static Sprite MakeSprite(string name, int width, int height, Func<int, int, float> alpha, SpriteAlignment alignment)
-        {
-            string path = $"{SpritesFolder}/{name}.png";
-            if (!File.Exists(path))
-            {
-                var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-                var pixels = new Color[width * height];
-                for (int y = 0; y < height; y++)
-                    for (int x = 0; x < width; x++)
-                        pixels[y * width + x] = new Color(1f, 1f, 1f, alpha(x, y));
-                texture.SetPixels(pixels);
-                File.WriteAllBytes(path, texture.EncodeToPNG());
-                UnityEngine.Object.DestroyImmediate(texture);
-                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
-            }
-
-            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
-            importer.textureType = TextureImporterType.Sprite;
-            importer.spriteImportMode = SpriteImportMode.Single;
-            importer.spritePixelsPerUnit = width;
-            importer.mipmapEnabled = false;
-            importer.alphaIsTransparency = true;
-            importer.textureCompression = TextureImporterCompression.Uncompressed;
-            var settings = new TextureImporterSettings();
-            importer.ReadTextureSettings(settings);
-            settings.spriteAlignment = (int)alignment;
-            importer.SetTextureSettings(settings);
-            importer.SaveAndReimport();
-
-            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
-        }
-
         // ---------- level data ----------
 
         static YurtaLevelData CreateLevel()
@@ -343,76 +260,6 @@ namespace IntellectualGame.EditorTools
             EditorUtility.SetDirty(level);
             AssetDatabase.SaveAssets();
             return level;
-        }
-
-        // ---------- UI helpers ----------
-
-        static void Stretch(RectTransform rect)
-        {
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-        }
-
-        static Text MakeText(Transform parent, string name, string value, int fontSize, Color color, TextAnchor alignment,
-            Font font, Vector2 anchor, Vector2 position, Vector2 size, FontStyle style = FontStyle.Normal)
-        {
-            var go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            var rect = (RectTransform)go.transform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
-            rect.anchoredPosition = position;
-            rect.sizeDelta = size;
-
-            var text = go.AddComponent<Text>();
-            text.font = font;
-            text.text = value;
-            text.fontSize = fontSize;
-            text.fontStyle = style;
-            text.color = color;
-            text.alignment = alignment;
-            text.horizontalOverflow = HorizontalWrapMode.Overflow;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
-            text.raycastTarget = false;
-            return text;
-        }
-
-        static Button MakeButton(Transform parent, string name, string label, Font font, Sprite sprite,
-            Vector2 anchor, Vector2 position, Vector2 size)
-        {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
-            go.transform.SetParent(parent, false);
-            var rect = (RectTransform)go.transform;
-            rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
-            rect.anchoredPosition = position;
-            rect.sizeDelta = size;
-
-            var image = go.GetComponent<Image>();
-            image.sprite = sprite;
-            image.type = Image.Type.Sliced;
-            go.GetComponent<Button>().targetGraphic = image;
-
-            var text = MakeText(go.transform, "Text", label, 40, Ink, TextAnchor.MiddleCenter, font,
-                new Vector2(0.5f, 0.5f), Vector2.zero, size);
-            Stretch(text.rectTransform);
-            return go.GetComponent<Button>();
-        }
-
-        // ---------- serialization helpers ----------
-
-        static void Assign(UnityEngine.Object target, Action<SerializedObject> fill)
-        {
-            var so = new SerializedObject(target);
-            fill(so);
-            so.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        static void SetArray<T>(SerializedProperty property, IList<T> items) where T : UnityEngine.Object
-        {
-            property.arraySize = items.Count;
-            for (int i = 0; i < items.Count; i++)
-                property.GetArrayElementAtIndex(i).objectReferenceValue = items[i];
         }
 
         static void EnsureInBuildSettings()

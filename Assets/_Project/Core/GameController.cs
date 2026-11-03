@@ -1,17 +1,18 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace IntellectualGame.Core
 {
     /// <summary>
-    /// Manager of the currently running game. In the menu a number button starts the game with the same index;
+    /// Manager of the currently running game. In the menu a number button starts the game registered under that number;
     /// while a game is running the number buttons are forwarded to it as answers.
     /// </summary>
     public class GameController : MonoBehaviour
     {
         enum State { Menu, Playing, Won }
 
-        [SerializeField] Game[] games;
         [SerializeField] Button[] numberButtons;
         [SerializeField] Text hintText;
         [SerializeField] Button quitButton;
@@ -20,15 +21,24 @@ namespace IntellectualGame.Core
         [SerializeField] Button replayButton;
         [SerializeField] Button menuButton;
 
+        readonly Dictionary<int, Game> games = new Dictionary<int, Game>();
         State state;
         Game current;
 
         void Awake()
         {
+            foreach (var game in FindObjectsByType<Game>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (games.ContainsKey(game.MenuNumber))
+                    Debug.LogWarning($"Menu number {game.MenuNumber} is used by both {games[game.MenuNumber].name} and {game.name}.", game);
+                else
+                    games.Add(game.MenuNumber, game);
+            }
+
             for (int i = 0; i < numberButtons.Length; i++)
             {
-                int index = i;
-                numberButtons[i].onClick.AddListener(() => OnNumberPressed(index));
+                int number = i + 1;
+                numberButtons[i].onClick.AddListener(() => OnNumberPressed(number));
             }
 
             quitButton.onClick.AddListener(ShowMenu);
@@ -38,18 +48,18 @@ namespace IntellectualGame.Core
 
         void Start() => ShowMenu();
 
-        void OnNumberPressed(int index)
+        void OnNumberPressed(int number)
         {
             switch (state)
             {
                 case State.Menu:
-                    if (index < games.Length && games[index] != null)
-                        Begin(games[index]);
+                    if (games.TryGetValue(number, out var game))
+                        Begin(game);
                     else
                         hintText.text = "Эта игра скоро появится";
                     break;
                 case State.Playing:
-                    current.SubmitAnswer(index + 1);
+                    current.SubmitAnswer(number);
                     break;
             }
         }
@@ -75,13 +85,14 @@ namespace IntellectualGame.Core
         void ShowMenu()
         {
             Release();
-            foreach (var game in games)
-                if (game != null) game.StopGame();
+            foreach (var game in games.Values) game.StopGame();
 
             state = State.Menu;
             winPanel.SetActive(false);
             quitButton.gameObject.SetActive(false);
-            hintText.text = "Нажми кнопку 1, чтобы начать игру «Юрта: сборка»";
+
+            var list = games.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key} — {pair.Value.Title}");
+            hintText.text = "Выбери игру:   " + string.Join("     ", list);
         }
 
         void OnGameFinished(Game game, bool won)

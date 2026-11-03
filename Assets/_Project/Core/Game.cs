@@ -9,7 +9,12 @@ namespace IntellectualGame.Core
     /// </summary>
     public abstract class Game : MonoBehaviour
     {
+        [Tooltip("Number button (1-based) that starts this game from the menu.")]
+        [SerializeField] int menuNumber = 1;
+
         public event Action<Game, bool> Finished;
+
+        public int MenuNumber => menuNumber;
 
         public bool IsRunning { get; private set; }
 
