@@ -1,0 +1,429 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using IntellectualGame.Core;
+using IntellectualGame.Yurta;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+namespace IntellectualGame.EditorTools
+{
+    /// <summary>
+    /// Builds the Yurta beta in SampleScene: primitive sprites, level asset, HUD, win screen and all references.
+    /// Runs once automatically after the first compile and can be re-run from Tools/Yurta/Build Scene.
+    /// </summary>
+    public static class YurtaSceneBuilder
+    {
+        const string ScenePath = "Assets/Scenes/SampleScene.unity";
+        const string SpritesFolder = "Assets/_Project/MiniGames/Yurta/Art";
+        const string LevelPath = "Assets/_Project/MiniGames/Yurta/Data/YurtaLevel01.asset";
+        const string MarkerPath = "Library/YurtaSceneBuilt.txt";
+
+        static readonly Color Ink = new Color(0.12f, 0.16f, 0.27f);
+
+        [MenuItem("Tools/Yurta/Build Scene")]
+        static void BuildFromMenu() => Build();
+
+        [InitializeOnLoadMethod]
+        static void AutoBuild()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                if (File.Exists(MarkerPath) || EditorApplication.isPlayingOrWillChangePlaymode) return;
+                if (EditorSceneManager.GetActiveScene().isDirty) return;
+                Build();
+            };
+        }
+
+        static void Build()
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(LevelPath));
+            Directory.CreateDirectory(SpritesFolder);
+
+            var sprites = CreateSprites();
+            CreateLevel();
+
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            RemoveOld(scene);
+
+            var canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
+            if (canvas == null) throw new InvalidOperationException("Canvas not found in SampleScene.");
+
+            var panel = canvas.transform.Find("Action Button");
+            var numberButtons = new List<Button>();
+            foreach (Transform child in panel) numberButtons.Add(child.GetComponent<Button>());
+            DockButtonPanel((RectTransform)panel);
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var uiSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+
+            // HUD
+            var hint = MakeText(canvas.transform, "Hint Text", "", 44, Ink, TextAnchor.MiddleCenter, font,
+                new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(1500f, 80f));
+
+            var hud = new GameObject("Yurta HUD", typeof(RectTransform));
+            hud.transform.SetParent(canvas.transform, false);
+            Stretch((RectTransform)hud.transform);
+            var equation = MakeText(hud.transform, "Equation Text", "", 110, Ink, TextAnchor.MiddleCenter, font,
+                new Vector2(0.5f, 0.5f), new Vector2(-560f, 120f), new Vector2(560f, 200f), FontStyle.Bold);
+            var progress = MakeText(hud.transform, "Progress Text", "", 40, Ink, TextAnchor.MiddleCenter, font,
+                new Vector2(0.5f, 0.5f), new Vector2(-560f, -20f), new Vector2(560f, 60f));
+            var feedback = MakeText(hud.transform, "Feedback Text", "", 44, Ink, TextAnchor.MiddleCenter, font,
+                new Vector2(0.5f, 0.5f), new Vector2(-560f, -90f), new Vector2(560f, 70f), FontStyle.Bold);
+
+            var quit = MakeButton(canvas.transform, "Quit Button", "Меню", font, uiSprite,
+                new Vector2(0f, 1f), new Vector2(130f, -60f), new Vector2(220f, 80f));
+
+            // Win screen (last sibling so it covers everything and blocks the number buttons)
+            var win = new GameObject("Win Panel", typeof(RectTransform), typeof(Image));
+            win.transform.SetParent(canvas.transform, false);
+            Stretch((RectTransform)win.transform);
+            win.GetComponent<Image>().color = new Color(0.05f, 0.08f, 0.15f, 0.75f);
+            var winText = MakeText(win.transform, "Win Text", "", 90, Color.white, TextAnchor.MiddleCenter, font,
+                new Vector2(0.5f, 0.5f), new Vector2(0f, 150f), new Vector2(1400f, 360f), FontStyle.Bold);
+            var replay = MakeButton(win.transform, "Replay Button", "Играть снова", font, uiSprite,
+                new Vector2(0.5f, 0.5f), new Vector2(-230f, -170f), new Vector2(400f, 110f));
+            var menu = MakeButton(win.transform, "Menu Button", "В меню", font, uiSprite,
+                new Vector2(0.5f, 0.5f), new Vector2(230f, -170f), new Vector2(400f, 110f));
+            win.SetActive(false);
+
+            // World
+            var world = BuildWorld(sprites, out var parts, out var tunduk);
+            var game = world.AddComponent<YurtaGame>();
+            var view = world.AddComponent<YurtaView>();
+
+            Assign(game, so =>
+            {
+                so.FindProperty("level").objectReferenceValue = AssetDatabase.LoadAssetAtPath<YurtaLevelData>(LevelPath);
+                so.FindProperty("view").objectReferenceValue = view;
+            });
+            Assign(view, so =>
+            {
+                so.FindProperty("hudRoot").objectReferenceValue = hud;
+                so.FindProperty("equationText").objectReferenceValue = equation;
+                so.FindProperty("progressText").objectReferenceValue = progress;
+                so.FindProperty("feedbackText").objectReferenceValue = feedback;
+                SetArray(so.FindProperty("parts"), parts);
+                so.FindProperty("tunduk").objectReferenceValue = tunduk;
+            });
+
+            var controllerObject = new GameObject("GameController");
+            var controller = controllerObject.AddComponent<GameController>();
+            Assign(controller, so =>
+            {
+                SetArray(so.FindProperty("games"), GamesFor(numberButtons.Count, game));
+                SetArray(so.FindProperty("numberButtons"), numberButtons.ToArray());
+                so.FindProperty("hintText").objectReferenceValue = hint;
+                so.FindProperty("quitButton").objectReferenceValue = quit;
+                so.FindProperty("winPanel").objectReferenceValue = win;
+                so.FindProperty("winText").objectReferenceValue = winText;
+                so.FindProperty("replayButton").objectReferenceValue = replay;
+                so.FindProperty("menuButton").objectReferenceValue = menu;
+            });
+
+            var camera = Camera.main;
+            if (camera != null)
+            {
+                camera.backgroundColor = new Color(0.62f, 0.82f, 0.95f);
+                camera.clearFlags = CameraClearFlags.SolidColor;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            EnsureInBuildSettings();
+            File.WriteAllText(MarkerPath, DateTime.Now.ToString("o"));
+            Debug.Log("Yurta scene built. Press Play and click button 1.");
+        }
+
+        static Game[] GamesFor(int count, Game yurta)
+        {
+            var games = new Game[count];
+            games[0] = yurta;
+            return games;
+        }
+
+        static void RemoveOld(Scene scene)
+        {
+            foreach (var root in scene.GetRootGameObjects())
+                if (root.name == "GameController" || root.name == "YurtaGame")
+                    UnityEngine.Object.DestroyImmediate(root);
+
+            var canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
+            if (canvas == null) return;
+            foreach (var name in new[] { "Hint Text", "Yurta HUD", "Quit Button", "Win Panel" })
+            {
+                var old = canvas.transform.Find(name);
+                if (old != null) UnityEngine.Object.DestroyImmediate(old.gameObject);
+            }
+        }
+
+        static void DockButtonPanel(RectTransform rect)
+        {
+            rect.anchorMin = new Vector2(0f, 0f);
+            rect.anchorMax = new Vector2(1f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(0f, 20f);
+            rect.sizeDelta = new Vector2(0f, 460f);
+        }
+
+        // ---------- world (primitive shapes) ----------
+
+        static GameObject BuildWorld(Dictionary<string, Sprite> s, out Transform[] parts, out Transform tunduk)
+        {
+            var world = new GameObject("YurtaGame");
+
+            // scenery: always visible
+            var scenery = Group("Scenery", world.transform, Vector2.zero);
+            Shape(scenery, "Sun", s["Circle"], new Vector2(6.8f, 3.9f), new Vector2(1.6f, 1.6f), new Color(1f, 0.87f, 0.3f), -9);
+            Shape(scenery, "Mountain Left", s["Triangle"], new Vector2(-5.2f, 1.7f), new Vector2(7f, 3.6f), new Color(0.5f, 0.58f, 0.7f), -8);
+            Shape(scenery, "Mountain Right", s["Triangle"], new Vector2(5.4f, 2.1f), new Vector2(8f, 4.4f), new Color(0.42f, 0.5f, 0.64f), -8);
+            Shape(scenery, "Snow Left", s["Triangle"], new Vector2(-5.2f, 3.0f), new Vector2(2.1f, 1.1f), Color.white, -7);
+            Shape(scenery, "Snow Right", s["Triangle"], new Vector2(5.4f, 3.6f), new Vector2(2.4f, 1.3f), Color.white, -7);
+            Shape(scenery, "Ground", s["Square"], new Vector2(0f, -2.6f), new Vector2(24f, 5f), new Color(0.42f, 0.67f, 0.31f), -6);
+
+            var wall = new Color(0.61f, 0.42f, 0.25f);
+            var wallDark = new Color(0.37f, 0.23f, 0.12f);
+            var felt = new Color(0.96f, 0.92f, 0.86f);
+            var red = new Color(0.78f, 0.16f, 0.16f);
+            var gold = new Color(0.9f, 0.71f, 0.13f);
+
+            // 1. kerege - lattice walls
+            var kerege = Group("Part 1 Kerege", world.transform, new Vector2(0f, 0.8f));
+            Shape(kerege, "Wall", s["Square"], new Vector2(0f, 0.8f), new Vector2(5f, 1.8f), wall, 1);
+            for (int i = -3; i <= 3; i++)
+                Shape(kerege, "Lattice " + i, s["Square"], new Vector2(i * 0.7f, 0.8f), new Vector2(0.55f, 0.55f), wallDark, 2, 45f);
+
+            // 2. uuk - roof poles
+            var uuk = Group("Part 2 Uuk", world.transform, new Vector2(0f, 2.5f));
+            var top = new Vector2(0f, 3.4f);
+            for (int i = -3; i <= 3; i++)
+            {
+                var bottom = new Vector2(i * 0.78f, 1.7f);
+                var delta = top - bottom;
+                Shape(uuk, "Pole " + i, s["Square"], (top + bottom) / 2f, new Vector2(0.07f, delta.magnitude),
+                    new Color(0.48f, 0.3f, 0.15f), 3, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg - 90f);
+            }
+
+            // 3. kiyiz - felt cover (half circle stretched into a dome)
+            var kiyiz = Group("Part 3 Kiyiz", world.transform, new Vector2(0f, 1.7f));
+            Shape(kiyiz, "Dome", s["HalfCircle"], new Vector2(0f, 1.7f), new Vector2(5f, 3.8f), felt, 4);
+
+            // 4. eshik - door
+            var door = Group("Part 4 Door", world.transform, new Vector2(0f, 0.55f));
+            Shape(door, "Door", s["Square"], new Vector2(0f, 0.55f), new Vector2(1f, 1.3f), new Color(0.56f, 0.11f, 0.11f), 6);
+            Shape(door, "Door Frame", s["Square"], new Vector2(0f, 0.55f), new Vector2(0.78f, 1.1f), new Color(0.68f, 0.18f, 0.18f), 7);
+            Shape(door, "Handle", s["Circle"], new Vector2(0.22f, 0.5f), new Vector2(0.14f, 0.14f), gold, 8);
+
+            // 5. ornament band
+            var band = Group("Part 5 Ornament", world.transform, new Vector2(0f, 1.55f));
+            Shape(band, "Band", s["Square"], new Vector2(0f, 1.55f), new Vector2(5f, 0.26f), red, 5);
+            for (int i = -6; i <= 6; i++)
+                Shape(band, "Diamond " + i, s["Square"], new Vector2(i * 0.38f, 1.55f), new Vector2(0.13f, 0.13f), Color.white, 6, 45f);
+
+            // reward: tunduk
+            var tundukGroup = Group("Tunduk", world.transform, new Vector2(0f, 3.4f));
+            Shape(tundukGroup, "Ring", s["Circle"], new Vector2(0f, 3.4f), new Vector2(0.95f, 0.95f), gold, 10);
+            Shape(tundukGroup, "Hole", s["Circle"], new Vector2(0f, 3.4f), new Vector2(0.75f, 0.75f), new Color(0.17f, 0.23f, 0.33f), 11);
+            Shape(tundukGroup, "Cross A", s["Square"], new Vector2(0f, 3.4f), new Vector2(0.75f, 0.07f), gold, 12);
+            Shape(tundukGroup, "Cross B", s["Square"], new Vector2(0f, 3.4f), new Vector2(0.07f, 0.75f), gold, 12);
+            Shape(tundukGroup, "Center", s["Circle"], new Vector2(0f, 3.4f), new Vector2(0.2f, 0.2f), gold, 13);
+
+            parts = new[] { kerege, uuk, kiyiz, door, band };
+            tunduk = tundukGroup;
+            return world;
+        }
+
+        static Transform Group(string name, Transform parent, Vector2 center)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.position = center;
+            return go.transform;
+        }
+
+        static void Shape(Transform parent, string name, Sprite sprite, Vector2 worldPos, Vector2 size, Color color,
+            int order, float rotation = 0f)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.position = worldPos;
+            go.transform.rotation = Quaternion.Euler(0f, 0f, rotation);
+            go.transform.localScale = new Vector3(size.x, size.y, 1f);
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.color = color;
+            renderer.sortingOrder = order;
+        }
+
+        // ---------- sprites ----------
+
+        static Dictionary<string, Sprite> CreateSprites()
+        {
+            const int size = 128;
+            var result = new Dictionary<string, Sprite>
+            {
+                ["Square"] = MakeSprite("Square", size, size, (x, y) => 1f, SpriteAlignment.Center),
+                ["Circle"] = MakeSprite("Circle", size, size, (x, y) =>
+                    Mathf.Clamp01(size / 2f - Vector2.Distance(new Vector2(x, y), new Vector2(size / 2f, size / 2f)) + 0.5f),
+                    SpriteAlignment.Center),
+                ["HalfCircle"] = MakeSprite("HalfCircle", size, size / 2, (x, y) =>
+                    Mathf.Clamp01(size / 2f - Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(size / 2f, 0f)) + 0.5f),
+                    SpriteAlignment.BottomCenter),
+                ["Triangle"] = MakeSprite("Triangle", size, size, (x, y) =>
+                    Mathf.Clamp01((size / 2f) * (1f - (y + 0.5f) / size) - Mathf.Abs(x + 0.5f - size / 2f) + 0.5f),
+                    SpriteAlignment.BottomCenter),
+            };
+            return result;
+        }
+
+        static Sprite MakeSprite(string name, int width, int height, Func<int, int, float> alpha, SpriteAlignment alignment)
+        {
+            string path = $"{SpritesFolder}/{name}.png";
+            if (!File.Exists(path))
+            {
+                var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                var pixels = new Color[width * height];
+                for (int y = 0; y < height; y++)
+                    for (int x = 0; x < width; x++)
+                        pixels[y * width + x] = new Color(1f, 1f, 1f, alpha(x, y));
+                texture.SetPixels(pixels);
+                File.WriteAllBytes(path, texture.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(texture);
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            }
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = width;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteAlignment = (int)alignment;
+            importer.SetTextureSettings(settings);
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        // ---------- level data ----------
+
+        static YurtaLevelData CreateLevel()
+        {
+            var level = AssetDatabase.LoadAssetAtPath<YurtaLevelData>(LevelPath);
+            if (level != null) return level;
+
+            level = ScriptableObject.CreateInstance<YurtaLevelData>();
+            AssetDatabase.CreateAsset(level, LevelPath);
+
+            var so = new SerializedObject(level);
+            var list = so.FindProperty("equations");
+            var equations = new[]
+            {
+                (1, EquationOperator.Add, 1),
+                (2, EquationOperator.Add, 3),
+                (4, EquationOperator.Add, 2),
+                (7, EquationOperator.Subtract, 3),
+                (3, EquationOperator.Add, 4),
+            };
+            list.arraySize = equations.Length;
+            for (int i = 0; i < equations.Length; i++)
+            {
+                var item = list.GetArrayElementAtIndex(i);
+                item.FindPropertyRelative("a").intValue = equations[i].Item1;
+                item.FindPropertyRelative("op").enumValueIndex = (int)equations[i].Item2;
+                item.FindPropertyRelative("b").intValue = equations[i].Item3;
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(level);
+            AssetDatabase.SaveAssets();
+            return level;
+        }
+
+        // ---------- UI helpers ----------
+
+        static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        static Text MakeText(Transform parent, string name, string value, int fontSize, Color color, TextAnchor alignment,
+            Font font, Vector2 anchor, Vector2 position, Vector2 size, FontStyle style = FontStyle.Normal)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+
+            var text = go.AddComponent<Text>();
+            text.font = font;
+            text.text = value;
+            text.fontSize = fontSize;
+            text.fontStyle = style;
+            text.color = color;
+            text.alignment = alignment;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.raycastTarget = false;
+            return text;
+        }
+
+        static Button MakeButton(Transform parent, string name, string label, Font font, Sprite sprite,
+            Vector2 anchor, Vector2 position, Vector2 size)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+
+            var image = go.GetComponent<Image>();
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            go.GetComponent<Button>().targetGraphic = image;
+
+            var text = MakeText(go.transform, "Text", label, 40, Ink, TextAnchor.MiddleCenter, font,
+                new Vector2(0.5f, 0.5f), Vector2.zero, size);
+            Stretch(text.rectTransform);
+            return go.GetComponent<Button>();
+        }
+
+        // ---------- serialization helpers ----------
+
+        static void Assign(UnityEngine.Object target, Action<SerializedObject> fill)
+        {
+            var so = new SerializedObject(target);
+            fill(so);
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void SetArray<T>(SerializedProperty property, IList<T> items) where T : UnityEngine.Object
+        {
+            property.arraySize = items.Count;
+            for (int i = 0; i < items.Count; i++)
+                property.GetArrayElementAtIndex(i).objectReferenceValue = items[i];
+        }
+
+        static void EnsureInBuildSettings()
+        {
+            foreach (var existing in EditorBuildSettings.scenes)
+                if (existing.path == ScenePath) return;
+            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes)
+            {
+                new EditorBuildSettingsScene(ScenePath, true)
+            };
+            EditorBuildSettings.scenes = scenes.ToArray();
+        }
+    }
+}
