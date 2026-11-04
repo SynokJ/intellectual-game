@@ -48,7 +48,7 @@ namespace IntellectualGame.EditorTools
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             RemoveOld(scene);
 
-            var canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
+            var canvas = FindMainCanvas();
             if (canvas == null) throw new InvalidOperationException("Canvas not found in SampleScene.");
 
             var panel = canvas.transform.Find("Action Button");
@@ -143,7 +143,7 @@ namespace IntellectualGame.EditorTools
                 if (root.name == "GameController" || root.name == "YurtaGame")
                     UnityEngine.Object.DestroyImmediate(root);
 
-            var canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
+            var canvas = FindMainCanvas();
             if (canvas == null) return;
             foreach (var name in new[] { "Hint Text", "Yurta HUD", "Quit Button", "Win Panel" })
             {

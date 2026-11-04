@@ -44,7 +44,7 @@ namespace IntellectualGame.EditorTools
             CreateLevel();
 
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-            var canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
+            var canvas = FindMainCanvas();
             var win = canvas != null ? canvas.transform.Find("Win Panel") : null;
             if (win == null || UnityEngine.Object.FindFirstObjectByType<IntellectualGame.Core.GameController>() == null)
             {

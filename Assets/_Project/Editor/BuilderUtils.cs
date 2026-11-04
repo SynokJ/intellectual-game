@@ -89,6 +89,14 @@ namespace IntellectualGame.EditorTools
 
         // ---------- UI helpers ----------
 
+        /// <summary>The in-game HUD canvas. Looked up by name because the scene also has a separate "Menu Canvas".</summary>
+        internal static Canvas FindMainCanvas()
+        {
+            foreach (var canvas in UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+                if (canvas.name == "Canvas") return canvas;
+            return null;
+        }
+
         internal static void Stretch(RectTransform rect)
         {
             rect.anchorMin = Vector2.zero;

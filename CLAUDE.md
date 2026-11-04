@@ -32,3 +32,4 @@ Rules:
 - Put tunable values in `LevelData`, not magic numbers in code.
 - If a request conflicts with these rules, flag it and propose a compliant alternative before implementing.
 - Animations use DOTween (`using DG.Tweening;`), only inside Views. Always `SetLink(gameObject)`, keep a reference to long-running Sequences and `Kill()` them in `ResetView()`. Views still expose `IEnumerator Play...()` (via `WaitForCompletion()`) so Controllers can `yield return` them.
+- UI must stay adaptive (WebGL on PC and mobile): anchors instead of fixed pixel positions, `AdaptiveGrid` for lists/grids, `SafeAreaFitter` for edge-anchored content, text with best-fit; test in both landscape and portrait.
