@@ -1,8 +1,7 @@
 using System.Collections;
-using IntellectualGame.Core;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
-using static IntellectualGame.Core.Tween;
 
 namespace IntellectualGame.Yurta
 {
@@ -21,7 +20,8 @@ namespace IntellectualGame.Yurta
 
         Vector3 tundukHome;
         Vector2 equationHome;
-        Coroutine feedbackRoutine;
+        Sequence feedbackSequence;
+        Sequence tundukSequence;
 
         void Awake()
         {
@@ -31,17 +31,20 @@ namespace IntellectualGame.Yurta
 
         public void ResetView()
         {
-            if (feedbackRoutine != null) StopCoroutine(feedbackRoutine);
-            feedbackRoutine = null;
+            StopFeedback();
+            tundukSequence?.Kill();
+            tundukSequence = null;
 
-            foreach (var part in parts) part.gameObject.SetActive(false);
+            foreach (var part in parts)
+            {
+                part.DOKill();
+                part.gameObject.SetActive(false);
+            }
             tunduk.gameObject.SetActive(false);
             tunduk.position = tundukHome;
             tunduk.rotation = Quaternion.identity;
             tunduk.localScale = Vector3.one;
 
-            equationText.rectTransform.anchoredPosition = equationHome;
-            equationText.rectTransform.localScale = Vector3.one;
             equationText.gameObject.SetActive(true);
             progressText.text = string.Empty;
             feedbackText.text = string.Empty;
@@ -65,57 +68,64 @@ namespace IntellectualGame.Yurta
 
         public void ShowFeedback(bool correct)
         {
-            if (feedbackRoutine != null) StopCoroutine(feedbackRoutine);
-            feedbackRoutine = StartCoroutine(FeedbackRoutine(correct));
+            StopFeedback();
+            feedbackText.color = correct ? CorrectColor : WrongColor;
+            feedbackText.text = correct ? "Верно!" : "Неверно, попробуй ещё";
+
+            var rect = equationText.rectTransform;
+            feedbackSequence = DOTween.Sequence().SetLink(gameObject);
+            if (correct)
+            {
+                feedbackSequence
+                    .Append(rect.DOScale(1.2f, 0.15f).SetEase(Ease.OutSine))
+                    .Append(rect.DOScale(1f, 0.15f).SetEase(Ease.InSine));
+            }
+            else
+            {
+                feedbackSequence.Append(rect.DOShakeAnchorPos(0.35f, new Vector2(18f, 0f), 13, 0f));
+            }
+
+            feedbackSequence.AppendInterval(0.6f).OnComplete(() =>
+            {
+                feedbackText.text = string.Empty;
+                feedbackSequence = null;
+            });
         }
 
         public IEnumerator PlayPartAssembled(int partIndex)
         {
             var part = parts[Mathf.Clamp(partIndex, 0, parts.Length - 1)];
+            part.DOKill();
             part.gameObject.SetActive(true);
-            yield return Animate(0.5f, t => part.localScale = Vector3.one * EaseOutBack(t));
-            part.localScale = Vector3.one;
+            part.localScale = Vector3.zero;
+            yield return part.DOScale(1f, 0.5f).SetEase(Ease.OutBack).SetLink(part.gameObject).WaitForCompletion();
         }
 
         public IEnumerator PlayTundukReward()
         {
+            tundukSequence?.Kill();
             tunduk.gameObject.SetActive(true);
-            Vector3 start = tundukHome + Vector3.up * 4f;
-            yield return Animate(1.1f, t =>
-            {
-                tunduk.position = Vector3.LerpUnclamped(start, tundukHome, EaseOutBounce(t));
-                tunduk.rotation = Quaternion.Euler(0f, 0f, 360f * (1f - t));
-            });
-            tunduk.position = tundukHome;
+            tunduk.position = tundukHome + Vector3.up * 4f;
             tunduk.rotation = Quaternion.identity;
-
-            yield return Animate(0.4f, t =>
-                tunduk.localScale = Vector3.one * (1f + 0.25f * Mathf.Sin(t * Mathf.PI)));
             tunduk.localScale = Vector3.one;
-            yield return new WaitForSeconds(0.6f);
+
+            tundukSequence = DOTween.Sequence().SetLink(gameObject)
+                .Append(tunduk.DOMove(tundukHome, 1.1f).SetEase(Ease.OutBounce))
+                .Join(tunduk.DORotate(new Vector3(0f, 0f, -360f), 1.1f, RotateMode.FastBeyond360).SetEase(Ease.Linear))
+                .Append(tunduk.DOScale(1.25f, 0.2f).SetEase(Ease.OutSine))
+                .Append(tunduk.DOScale(1f, 0.2f).SetEase(Ease.InSine))
+                .AppendInterval(0.6f);
+            yield return tundukSequence.WaitForCompletion();
         }
 
-        IEnumerator FeedbackRoutine(bool correct)
+        void StopFeedback()
         {
-            feedbackText.color = correct ? CorrectColor : WrongColor;
-            feedbackText.text = correct ? "Верно!" : "Неверно, попробуй ещё";
+            feedbackSequence?.Kill();
+            feedbackSequence = null;
 
             var rect = equationText.rectTransform;
-            if (correct)
-            {
-                yield return Animate(0.3f, t => rect.localScale = Vector3.one * (1f + 0.2f * Mathf.Sin(t * Mathf.PI)));
-                rect.localScale = Vector3.one;
-            }
-            else
-            {
-                yield return Animate(0.35f, t =>
-                    rect.anchoredPosition = equationHome + Vector2.right * (Mathf.Sin(t * 40f) * 18f * (1f - t)));
-                rect.anchoredPosition = equationHome;
-            }
-
-            yield return new WaitForSeconds(0.6f);
-            feedbackText.text = string.Empty;
-            feedbackRoutine = null;
+            rect.localScale = Vector3.one;
+            rect.anchoredPosition = equationHome;
         }
     }
 }

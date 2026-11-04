@@ -1,9 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
-using static IntellectualGame.Core.Tween;
 
 namespace IntellectualGame.Otara
 {
@@ -43,7 +43,7 @@ namespace IntellectualGame.Otara
         readonly SheepView[] penSheep = new SheepView[PenSlots.Length];
         readonly List<SheepView> flock = new List<SheepView>();
         Vector2 questionHome;
-        Coroutine feedbackRoutine;
+        Sequence feedbackSequence;
 
         void Awake()
         {
@@ -54,7 +54,7 @@ namespace IntellectualGame.Otara
         public void ResetView()
         {
             StopAllCoroutines();
-            feedbackRoutine = null;
+            StopFeedback();
 
             ClearFlock();
             pen.SetActive(false);
@@ -86,8 +86,18 @@ namespace IntellectualGame.Otara
 
         public void ShowFeedback(bool correct)
         {
-            if (feedbackRoutine != null) StopCoroutine(feedbackRoutine);
-            feedbackRoutine = StartCoroutine(FeedbackRoutine(correct));
+            StopFeedback();
+            feedbackText.color = correct ? CorrectColor : WrongColor;
+            feedbackText.text = correct ? "Верно!" : "Неверно, попробуй ещё";
+
+            feedbackSequence = DOTween.Sequence().SetLink(gameObject);
+            if (!correct)
+                feedbackSequence.Append(questionText.rectTransform.DOShakeAnchorPos(0.35f, new Vector2(18f, 0f), 13, 0f));
+            feedbackSequence.AppendInterval(0.7f).OnComplete(() =>
+            {
+                feedbackText.text = string.Empty;
+                feedbackSequence = null;
+            });
         }
 
         /// <summary>Clears the previous round and puts the sheep that are already there into place.</summary>
@@ -192,22 +202,11 @@ namespace IntellectualGame.Otara
             Destroy(sheep.gameObject);
         }
 
-        IEnumerator FeedbackRoutine(bool correct)
+        void StopFeedback()
         {
-            feedbackText.color = correct ? CorrectColor : WrongColor;
-            feedbackText.text = correct ? "Верно!" : "Неверно, попробуй ещё";
-
-            var rect = questionText.rectTransform;
-            if (!correct)
-            {
-                yield return Animate(0.35f, t =>
-                    rect.anchoredPosition = questionHome + Vector2.right * (Mathf.Sin(t * 40f) * 18f * (1f - t)));
-                rect.anchoredPosition = questionHome;
-            }
-
-            yield return new WaitForSeconds(0.7f);
-            feedbackText.text = string.Empty;
-            feedbackRoutine = null;
+            feedbackSequence?.Kill();
+            feedbackSequence = null;
+            questionText.rectTransform.anchoredPosition = questionHome;
         }
 
         SheepView Spawn()

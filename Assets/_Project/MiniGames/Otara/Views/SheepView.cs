@@ -1,4 +1,5 @@
 using System.Collections;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -15,6 +16,7 @@ namespace IntellectualGame.Otara
         SortingGroup sortingGroup;
         float scale = 1f;
         float facing = 1f;
+        Tween motion;
 
         void Awake() => sortingGroup = GetComponent<SortingGroup>();
 
@@ -33,16 +35,15 @@ namespace IntellectualGame.Otara
             {
                 if (Mathf.Abs(target.x - start.x) > 0.01f) facing = Mathf.Sign(target.x - start.x);
 
-                float duration = distance / WalkSpeed;
-                for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
+                motion?.Kill();
+                motion = DOVirtual.Float(0f, 1f, distance / WalkSpeed, t =>
                 {
-                    float t = elapsed / duration;
                     Vector2 position = Vector2.Lerp(start, target, t);
                     position.y += Mathf.Abs(Mathf.Sin(t * distance / HopLength * Mathf.PI)) * HopHeight;
                     transform.position = position;
                     Apply(position.y);
-                    yield return null;
-                }
+                }).SetEase(Ease.Linear).SetLink(gameObject);
+                yield return motion.WaitForCompletion();
             }
 
             transform.position = target;
@@ -52,14 +53,12 @@ namespace IntellectualGame.Otara
         public IEnumerator Cheer(int hops)
         {
             Vector2 home = transform.position;
-            for (int i = 0; i < hops; i++)
-            {
-                for (float elapsed = 0f; elapsed < 0.3f; elapsed += Time.deltaTime)
-                {
-                    transform.position = home + Vector2.up * (Mathf.Sin(elapsed / 0.3f * Mathf.PI) * 0.45f);
-                    yield return null;
-                }
-            }
+            motion?.Kill();
+            motion = transform.DOMoveY(home.y + 0.45f, 0.15f)
+                .SetEase(Ease.OutSine)
+                .SetLoops(hops * 2, LoopType.Yoyo)
+                .SetLink(gameObject);
+            yield return motion.WaitForCompletion();
             transform.position = home;
         }
 
