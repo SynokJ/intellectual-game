@@ -20,7 +20,7 @@ namespace IntellectualGame.EditorTools
         const string ScenePath = "Assets/Scenes/SampleScene.unity";
         const string CatalogPath = "Assets/_Project/Menu/Data/GameCatalog.asset";
         const string CirclePath = "Assets/_Project/MiniGames/Yurta/Art/Circle.png";
-        const string MarkerPath = "Library/MenuSceneBuilt_v4.txt";
+        const string MarkerPath = "Library/MenuSceneBuilt_v5.txt";
 
         struct GameSpec
         {
@@ -42,12 +42,50 @@ namespace IntellectualGame.EditorTools
         {
             new GameSpec("YurtaGame", "Yurta HUD", "Assets/_Project/MiniGames/Yurta/Prefabs/YurtaGame.prefab", 1, new Color(1f, 0.9f, 0.62f)),
             new GameSpec("OtaraGame", "Otara HUD", "Assets/_Project/MiniGames/Otara/Prefabs/OtaraGame.prefab", 2, new Color(0.82f, 0.95f, 0.75f)),
+            new GameSpec("BazaarGame", "Bazaar HUD", BazaarSceneBuilder.PrefabPath, 3, new Color(1f, 0.82f, 0.7f)),
         };
 
         static readonly Color Sky = new Color(0.62f, 0.82f, 0.95f);
         static readonly Color Grass = new Color(0.42f, 0.67f, 0.31f);
         static readonly Color Plate = new Color(0f, 0f, 0f, 0.6f);
         static readonly Color Cream = new Color(1f, 0.94f, 0.78f);
+
+        // the categories and the first games of each; games without a prefab are shown as "coming soon"
+        static readonly (string title, Color accent)[] Categories =
+        {
+            ("Математика", new Color(0.99f, 0.8f, 0.4f)),
+            ("Физика и логика", new Color(0.55f, 0.75f, 0.95f)),
+            ("Азбука и язык", new Color(0.95f, 0.65f, 0.7f)),
+            ("Ребусы", new Color(0.75f, 0.65f, 0.95f)),
+            ("Раскраски", new Color(0.95f, 0.75f, 0.5f)),
+            ("Познавательные игры", new Color(0.55f, 0.85f, 0.8f)),
+            ("Дополнительно", new Color(0.8f, 0.8f, 0.55f)),
+        };
+
+        static readonly (int number, int category, string title, string description)[] CatalogGames =
+        {
+            (1, 0, "Юрта: сборка", "Реши примеры и собери юрту"),
+            (2, 0, "Отара овец", "Считай овец в загоне и раздай их семьям"),
+            (3, 0, "Базар и бешбармак", "Накорми гостей: считай продукты, монеты и сдачу"),
+            (4, 1, "Альчик", "Выбери силу и угол броска и попади в цель"),
+            (5, 1, "Көк бөрү: передача", "Брось козла в тай-казан, учитывая инерцию"),
+            (6, 1, "Лук и мишень", "Учти ветер и расстояние и попади в центр"),
+            (7, 2, "Кереге-слова", "Собери слово из букв на решётке кереге"),
+            (8, 2, "Алфавит-путешествие", "Найди пары: буква и предмет кыргызской культуры"),
+            (9, 2, "Пиши по войлоку", "Обведи букву пальцем по войлочному шаблону"),
+            (10, 3, "Ребус-пословица", "Разгадай ребус и открой народную мудрость"),
+            (11, 3, "Загадки-жомок", "Выбери верную картинку к народной загадке"),
+            (12, 3, "Предмет по тени", "Угадай предмет быта по силуэту"),
+            (13, 4, "Шырдак", "Раскрась войлочный ковёр по образцу"),
+            (14, 4, "Тебетей и элечек", "Раскрась и укрась национальный головной убор"),
+            (15, 4, "Джайлоо-пейзаж", "Раскрась горы, озеро и юрты"),
+            (16, 5, "Манас: путь героя", "Отвечай на вопросы по эпосу и веди героя вперёд"),
+            (17, 5, "Карта Кыргызстана", "Расставь горы, озёра и города на карте"),
+            (18, 5, "Животные и птицы", "Найди пару: животное и место, где оно живёт"),
+            (19, 6, "Память: узоры", "Найди одинаковые узоры и предметы"),
+            (20, 6, "Ремёсла: валяние войлока", "Расставь шаги валяния войлока по порядку"),
+            (21, 6, "Путь каравана", "Проложи маршрут по Великому шёлковому пути"),
+        };
 
         static readonly string[] HudTexts = { "Hint Text", "Equation Text", "Progress Text", "Feedback Text", "Question Text", "Event Text" };
         static readonly string[] HudButtons = { "Quit Button", "Replay Button", "Menu Button" };
@@ -66,7 +104,7 @@ namespace IntellectualGame.EditorTools
             };
         }
 
-        static void Build()
+        internal static void Build()
         {
             Directory.CreateDirectory(Path.GetDirectoryName(CatalogPath));
             var catalog = CreateCatalog();
@@ -91,6 +129,8 @@ namespace IntellectualGame.EditorTools
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var uiSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             var circle = AssetDatabase.LoadAssetAtPath<Sprite>(CirclePath);
+
+            if (!File.Exists(BazaarSceneBuilder.PrefabPath)) BazaarSceneBuilder.AddToScene(mainCanvas);
 
             // the shell canvas (hint, quit, win panel) draws above the game canvases, the menu above everything
             mainCanvas.sortingOrder = 5;
@@ -165,12 +205,41 @@ namespace IntellectualGame.EditorTools
             AddBackdrop(subtitle, uiSprite);
 
             // scrollable, adaptive grid of cards
-            var scrollObject = new GameObject("Scroll View", typeof(RectTransform), typeof(ScrollRect));
-            scrollObject.transform.SetParent(safe.transform, false);
-            var scrollRect = (RectTransform)scrollObject.transform;
-            Stretch(scrollRect);
-            scrollRect.offsetMin = new Vector2(40f, 40f);
-            scrollRect.offsetMax = new Vector2(-40f, -290f);
+            // body: category tabs on top, the scrollable cards take the rest
+            var body = new GameObject("Body", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            body.transform.SetParent(safe.transform, false);
+            var bodyRect = (RectTransform)body.transform;
+            Stretch(bodyRect);
+            bodyRect.offsetMin = new Vector2(40f, 40f);
+            bodyRect.offsetMax = new Vector2(-40f, -270f);
+            var bodyLayout = body.GetComponent<VerticalLayoutGroup>();
+            bodyLayout.spacing = 16f;
+            bodyLayout.childControlWidth = true;
+            bodyLayout.childControlHeight = true;
+            bodyLayout.childForceExpandWidth = true;
+            bodyLayout.childForceExpandHeight = false;
+
+            var tabsObject = new GameObject("Category Tabs", typeof(RectTransform), typeof(GridLayoutGroup), typeof(AdaptiveGrid));
+            tabsObject.transform.SetParent(body.transform, false);
+            var tabGrid = tabsObject.GetComponent<GridLayoutGroup>();
+            tabGrid.spacing = new Vector2(16f, 16f);
+            tabGrid.childAlignment = TextAnchor.UpperCenter;
+            tabGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            Assign(tabsObject.GetComponent<AdaptiveGrid>(), so =>
+            {
+                so.FindProperty("minCellWidth").floatValue = 260f;
+                so.FindProperty("maxCellWidth").floatValue = 360f;
+                so.FindProperty("cellAspect").floatValue = 0.3f;
+                so.FindProperty("portraitCellAspect").floatValue = 0.34f;
+                so.FindProperty("maxColumns").intValue = 7;
+            });
+            var tab = BuildTabTemplate(tabsObject.transform, font, uiSprite);
+
+            var scrollObject = new GameObject("Scroll View", typeof(RectTransform), typeof(ScrollRect), typeof(LayoutElement));
+            scrollObject.transform.SetParent(body.transform, false);
+            var scrollLayout = scrollObject.GetComponent<LayoutElement>();
+            scrollLayout.flexibleHeight = 1f;
+            scrollLayout.minHeight = 300f;
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
             viewport.transform.SetParent(scrollObject.transform, false);
@@ -216,10 +285,40 @@ namespace IntellectualGame.EditorTools
                 so.FindProperty("root").objectReferenceValue = panel;
                 so.FindProperty("titleText").objectReferenceValue = title;
                 so.FindProperty("subtitleText").objectReferenceValue = subtitle;
+                so.FindProperty("tabContainer").objectReferenceValue = (RectTransform)tabsObject.transform;
+                so.FindProperty("tabTemplate").objectReferenceValue = tab;
                 so.FindProperty("cardContainer").objectReferenceValue = contentRect;
                 so.FindProperty("cardTemplate").objectReferenceValue = card;
             });
             return view;
+        }
+
+        static CategoryTabView BuildTabTemplate(Transform parent, Font font, Sprite uiSprite)
+        {
+            var go = new GameObject("Category Tab Template", typeof(RectTransform), typeof(Image), typeof(Button), typeof(CategoryTabView));
+            go.transform.SetParent(parent, false);
+            ((RectTransform)go.transform).sizeDelta = new Vector2(300f, 90f);
+
+            var background = go.GetComponent<Image>();
+            background.sprite = uiSprite;
+            background.type = Image.Type.Sliced;
+            var button = go.GetComponent<Button>();
+            button.targetGraphic = background;
+
+            var label = MakeText(go.transform, "Label", "", 34, Ink, TextAnchor.MiddleCenter, font,
+                new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, FontStyle.Bold);
+            Fill(label.rectTransform, 0f, 1f);
+            FitText(label, 18, 34);
+
+            var tab = go.GetComponent<CategoryTabView>();
+            Assign(tab, so =>
+            {
+                so.FindProperty("background").objectReferenceValue = background;
+                so.FindProperty("label").objectReferenceValue = label;
+                so.FindProperty("button").objectReferenceValue = button;
+            });
+            go.SetActive(false);
+            return tab;
         }
 
         static GameCardView BuildCardTemplate(Transform parent, Font font, Sprite uiSprite, Sprite circle)
@@ -488,30 +587,54 @@ namespace IntellectualGame.EditorTools
             text.verticalOverflow = VerticalWrapMode.Truncate;
         }
 
+        /// <summary>Creates the catalog, or adds the categories and games it does not know yet. Never overwrites edits.</summary>
         static GameCatalog CreateCatalog()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<GameCatalog>(CatalogPath);
-            if (catalog != null) return catalog;
-
-            catalog = ScriptableObject.CreateInstance<GameCatalog>();
-            AssetDatabase.CreateAsset(catalog, CatalogPath);
-
-            var entries = new[]
+            if (catalog == null)
             {
-                (1, "Юрта: сборка", "Реши примеры и собери юрту", new Color(0.99f, 0.8f, 0.4f)),
-                (2, "Отара овец", "Считай овец в загоне и раздай их семьям", new Color(0.6f, 0.85f, 0.55f)),
-            };
-            var so = new SerializedObject(catalog);
-            var list = so.FindProperty("entries");
-            list.arraySize = entries.Length;
-            for (int i = 0; i < entries.Length; i++)
-            {
-                var item = list.GetArrayElementAtIndex(i);
-                item.FindPropertyRelative("menuNumber").intValue = entries[i].Item1;
-                item.FindPropertyRelative("title").stringValue = entries[i].Item2;
-                item.FindPropertyRelative("description").stringValue = entries[i].Item3;
-                item.FindPropertyRelative("accent").colorValue = entries[i].Item4;
+                catalog = ScriptableObject.CreateInstance<GameCatalog>();
+                AssetDatabase.CreateAsset(catalog, CatalogPath);
             }
+
+            var so = new SerializedObject(catalog);
+            var categories = so.FindProperty("categories");
+            for (int i = categories.arraySize; i < Categories.Length; i++)
+            {
+                categories.arraySize = i + 1;
+                var item = categories.GetArrayElementAtIndex(i);
+                item.FindPropertyRelative("title").stringValue = Categories[i].title;
+                item.FindPropertyRelative("accent").colorValue = Categories[i].accent;
+            }
+
+            var entries = so.FindProperty("entries");
+            var known = new System.Collections.Generic.HashSet<int>();
+            for (int i = 0; i < entries.arraySize; i++)
+                known.Add(entries.GetArrayElementAtIndex(i).FindPropertyRelative("menuNumber").intValue);
+
+            foreach (var game in CatalogGames)
+            {
+                if (known.Contains(game.number)) continue;
+
+                int index = entries.arraySize;
+                entries.arraySize = index + 1;
+                var item = entries.GetArrayElementAtIndex(index);
+                item.FindPropertyRelative("menuNumber").intValue = game.number;
+                item.FindPropertyRelative("category").intValue = game.category;
+                item.FindPropertyRelative("title").stringValue = game.title;
+                item.FindPropertyRelative("description").stringValue = game.description;
+                item.FindPropertyRelative("accent").colorValue = Categories[game.category].accent;
+            }
+
+            // growing an array copies the previous element, so a placeholder would inherit a real game's prefab
+            for (int i = 0; i < entries.arraySize; i++)
+            {
+                var item = entries.GetArrayElementAtIndex(i);
+                int number = item.FindPropertyRelative("menuNumber").intValue;
+                if (!System.Array.Exists(Specs, spec => spec.menuNumber == number))
+                    item.FindPropertyRelative("prefab").objectReferenceValue = null;
+            }
+
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
