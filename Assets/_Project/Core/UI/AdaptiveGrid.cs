@@ -12,6 +12,8 @@ namespace IntellectualGame.Core
         [SerializeField] float maxCellWidth = 640f;
         [Tooltip("Cell height divided by cell width.")]
         [SerializeField] float cellAspect = 0.75f;
+        [Tooltip("Cell height divided by cell width on a portrait screen; 0 = same as landscape.")]
+        [SerializeField] float portraitCellAspect;
         [SerializeField] int maxColumns = 4;
 
         GridLayoutGroup grid;
@@ -38,7 +40,8 @@ namespace IntellectualGame.Core
 
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = columns;
-            grid.cellSize = new Vector2(width, width * cellAspect);
+            float aspect = Screen.height > Screen.width && portraitCellAspect > 0f ? portraitCellAspect : cellAspect;
+            grid.cellSize = new Vector2(width, width * aspect);
         }
     }
 }

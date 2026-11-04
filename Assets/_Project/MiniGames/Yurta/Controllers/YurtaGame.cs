@@ -14,6 +14,7 @@ namespace IntellectualGame.Yurta
         bool busy;
 
         public override string Title => "Юрта: сборка";
+        public override int AnswerCount => Mathf.Max(level.MaxAnswer, MinAnswerCount);
         public override string WinMessage => "Юрта готова!";
 
         protected override void OnGameStart()

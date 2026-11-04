@@ -27,7 +27,7 @@ namespace IntellectualGame.Otara
             : $"Раздай поровну {families} семьям.\nСколько овец у каждой семьи?";
     }
 
-    /// <summary>Model (config): the rounds of the game. Answers must fit the 1-7 number buttons.</summary>
+    /// <summary>Model (config): the rounds of the game.</summary>
     [CreateAssetMenu(menuName = "Game/Otara/Level", fileName = "OtaraLevel")]
     public class OtaraLevelData : ScriptableObject
     {
@@ -37,13 +37,16 @@ namespace IntellectualGame.Otara
 
         public IReadOnlyList<OtaraRound> Rounds => rounds;
 
+        /// <summary>The biggest answer of the level; the answer pad gets at least this many buttons.</summary>
+        public int MaxAnswer => rounds.Count == 0 ? 0 : rounds.Max(round => round.Answer);
+
         void OnValidate()
         {
             for (int i = 0; i < rounds.Count; i++)
             {
                 var round = rounds[i];
-                if (round.Answer < 1 || round.Answer > 7)
-                    Debug.LogWarning($"{name}: round {i + 1} has answer {round.Answer}, but only the buttons 1-7 exist.", this);
+                if (round.Answer < 1)
+                    Debug.LogWarning($"{name}: round {i + 1} has answer {round.Answer}, but the buttons start at 1.", this);
                 if (round.kind == OtaraRoundKind.Share && (round.families < 2 || round.families > 3 || round.startCount % round.families != 0))
                     Debug.LogWarning($"{name}: round {i + 1} must share evenly between 2 or 3 families.", this);
 

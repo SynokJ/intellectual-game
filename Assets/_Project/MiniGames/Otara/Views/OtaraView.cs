@@ -20,8 +20,8 @@ namespace IntellectualGame.Otara
         [SerializeField] Text feedbackText;
         [SerializeField] Text progressText;
 
-        static readonly Color CorrectColor = new Color(0.15f, 0.55f, 0.2f);
-        static readonly Color WrongColor = new Color(0.75f, 0.15f, 0.15f);
+        static readonly Color CorrectColor = new Color(0.5f, 0.95f, 0.55f);
+        static readonly Color WrongColor = new Color(1f, 0.55f, 0.5f);
 
         // pen slots are filled front/back alternately so the pen never looks lopsided
         static readonly Vector2[] PenSlots =

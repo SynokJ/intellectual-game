@@ -16,8 +16,7 @@ namespace IntellectualGame.Core
         [SerializeField] GameCatalog catalog;
         [SerializeField] MainMenuView menuView;
         [SerializeField] Game[] games;
-        [SerializeField] GameObject answerPad;
-        [SerializeField] Button[] numberButtons;
+        [SerializeField] AnswerPadView answerPad;
         [SerializeField] Text hintText;
         [SerializeField] Button quitButton;
         [SerializeField] GameObject winPanel;
@@ -39,13 +38,8 @@ namespace IntellectualGame.Core
                     gamesByNumber.Add(game.MenuNumber, game);
             }
 
-            for (int i = 0; i < numberButtons.Length; i++)
-            {
-                int number = i + 1;
-                numberButtons[i].onClick.AddListener(() => OnNumberPressed(number));
-            }
-
             menuView.GameSelected += OnGameSelected;
+            answerPad.AnswerPressed += OnAnswerPressed;
             quitButton.onClick.AddListener(ShowMenu);
             menuButton.onClick.AddListener(ShowMenu);
             replayButton.onClick.AddListener(Replay);
@@ -54,6 +48,7 @@ namespace IntellectualGame.Core
         void OnDestroy()
         {
             if (menuView != null) menuView.GameSelected -= OnGameSelected;
+            if (answerPad != null) answerPad.AnswerPressed -= OnAnswerPressed;
         }
 
         void Start() => ShowMenu();
@@ -64,7 +59,7 @@ namespace IntellectualGame.Core
                 Begin(game);
         }
 
-        void OnNumberPressed(int number)
+        void OnAnswerPressed(int number)
         {
             if (state == State.Playing) current.SubmitAnswer(number);
         }
@@ -78,7 +73,7 @@ namespace IntellectualGame.Core
             state = State.Playing;
             menuView.Hide();
             winPanel.SetActive(false);
-            answerPad.SetActive(true);
+            answerPad.Show(game.AnswerCount);
             quitButton.gameObject.SetActive(true);
             hintText.gameObject.SetActive(true);
             hintText.text = "Выбери правильный ответ";
@@ -97,7 +92,7 @@ namespace IntellectualGame.Core
 
             state = State.Menu;
             winPanel.SetActive(false);
-            answerPad.SetActive(false);
+            answerPad.Hide();
             quitButton.gameObject.SetActive(false);
             hintText.gameObject.SetActive(false);
             menuView.Show(catalog, gamesByNumber.ContainsKey);

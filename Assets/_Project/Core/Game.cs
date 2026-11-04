@@ -18,7 +18,12 @@ namespace IntellectualGame.Core
 
         public bool IsRunning { get; private set; }
 
+        protected const int MinAnswerCount = 5;
+
         public abstract string Title { get; }
+
+        /// <summary>How many answer buttons (numbered from 1) the pad shows while this game runs.</summary>
+        public virtual int AnswerCount => 9;
         public virtual string WinMessage => "Победа!";
 
         public void StartGame()

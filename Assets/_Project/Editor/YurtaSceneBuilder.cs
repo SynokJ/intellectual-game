@@ -51,11 +51,6 @@ namespace IntellectualGame.EditorTools
             var canvas = FindMainCanvas();
             if (canvas == null) throw new InvalidOperationException("Canvas not found in SampleScene.");
 
-            var panel = canvas.transform.Find("Action Button");
-            var numberButtons = new List<Button>();
-            foreach (Transform child in panel) numberButtons.Add(child.GetComponent<Button>());
-            DockButtonPanel((RectTransform)panel);
-
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var uiSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
 
@@ -114,7 +109,6 @@ namespace IntellectualGame.EditorTools
             var controller = controllerObject.AddComponent<GameController>();
             Assign(controller, so =>
             {
-                SetArray(so.FindProperty("numberButtons"), numberButtons.ToArray());
                 so.FindProperty("hintText").objectReferenceValue = hint;
                 so.FindProperty("quitButton").objectReferenceValue = quit;
                 so.FindProperty("winPanel").objectReferenceValue = win;
@@ -150,15 +144,6 @@ namespace IntellectualGame.EditorTools
                 var old = canvas.transform.Find(name);
                 if (old != null) UnityEngine.Object.DestroyImmediate(old.gameObject);
             }
-        }
-
-        static void DockButtonPanel(RectTransform rect)
-        {
-            rect.anchorMin = new Vector2(0f, 0f);
-            rect.anchorMax = new Vector2(1f, 0f);
-            rect.pivot = new Vector2(0.5f, 0f);
-            rect.anchoredPosition = new Vector2(0f, 20f);
-            rect.sizeDelta = new Vector2(0f, 460f);
         }
 
         // ---------- world (primitive shapes) ----------

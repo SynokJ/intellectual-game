@@ -14,6 +14,7 @@ namespace IntellectualGame.Otara
         bool awaitingAnswer;
 
         public override string Title => "Отара овец";
+        public override int AnswerCount => Mathf.Max(level.MaxAnswer, MinAnswerCount);
         public override string WinMessage => "Отара в безопасности!";
 
         protected override void OnGameStart()

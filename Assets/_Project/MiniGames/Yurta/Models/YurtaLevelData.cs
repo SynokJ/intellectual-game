@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace IntellectualGame.Yurta
@@ -17,7 +18,7 @@ namespace IntellectualGame.Yurta
         public string Text => $"{a} {(op == EquationOperator.Add ? "+" : "−")} {b} = ?";
     }
 
-    /// <summary>Model (config): one equation per assembled part of the yurt. Answers must fit the 1-7 number buttons.</summary>
+    /// <summary>Model (config): one equation per assembled part of the yurt.</summary>
     [CreateAssetMenu(menuName = "Game/Yurta/Level", fileName = "YurtaLevel")]
     public class YurtaLevelData : ScriptableObject
     {
@@ -25,11 +26,14 @@ namespace IntellectualGame.Yurta
 
         public IReadOnlyList<YurtaEquation> Equations => equations;
 
+        /// <summary>The biggest answer of the level; the answer pad gets at least this many buttons.</summary>
+        public int MaxAnswer => equations.Count == 0 ? 0 : equations.Max(equation => equation.Answer);
+
         void OnValidate()
         {
             foreach (var equation in equations)
-                if (equation.Answer < 1 || equation.Answer > 7)
-                    Debug.LogWarning($"{name}: answer of '{equation.Text}' is {equation.Answer}, but only the buttons 1-7 exist.", this);
+                if (equation.Answer < 1)
+                    Debug.LogWarning($"{name}: answer of '{equation.Text}' is {equation.Answer}, but the buttons start at 1.", this);
         }
     }
 }
