@@ -20,7 +20,7 @@ namespace IntellectualGame.EditorTools
         const string ScenePath = "Assets/Scenes/SampleScene.unity";
         const string CatalogPath = "Assets/_Project/Menu/Data/GameCatalog.asset";
         const string CirclePath = "Assets/_Project/MiniGames/Yurta/Art/Circle.png";
-        const string MarkerPath = "Library/MenuSceneBuilt_v5.txt";
+        const string MarkerPath = "Library/MenuSceneBuilt_v6.txt";
 
         struct GameSpec
         {
@@ -43,6 +43,11 @@ namespace IntellectualGame.EditorTools
             new GameSpec("YurtaGame", "Yurta HUD", "Assets/_Project/MiniGames/Yurta/Prefabs/YurtaGame.prefab", 1, new Color(1f, 0.9f, 0.62f)),
             new GameSpec("OtaraGame", "Otara HUD", "Assets/_Project/MiniGames/Otara/Prefabs/OtaraGame.prefab", 2, new Color(0.82f, 0.95f, 0.75f)),
             new GameSpec("BazaarGame", "Bazaar HUD", BazaarSceneBuilder.PrefabPath, 3, new Color(1f, 0.82f, 0.7f)),
+            new GameSpec("AlchikGame", "Alchik HUD", AlchikSceneBuilder.PrefabPath, 4, new Color(0.72f, 0.86f, 1f)),
+            new GameSpec("KeregeGame", "Kerege HUD", KeregeSceneBuilder.PrefabPath, 7, new Color(1f, 0.8f, 0.85f)),
+            new GameSpec("ProverbGame", "Proverb HUD", QuizSceneBuilders.ProverbPrefabPath, 10, new Color(0.85f, 0.78f, 1f)),
+            new GameSpec("ShyrdakGame", "Shyrdak HUD", ShyrdakSceneBuilder.PrefabPath, 13, new Color(1f, 0.85f, 0.65f)),
+            new GameSpec("ManasGame", "Manas HUD", QuizSceneBuilders.ManasPrefabPath, 16, new Color(0.7f, 0.92f, 0.88f)),
         };
 
         static readonly Color Sky = new Color(0.62f, 0.82f, 0.95f);
@@ -87,7 +92,7 @@ namespace IntellectualGame.EditorTools
             (21, 6, "Путь каравана", "Проложи маршрут по Великому шёлковому пути"),
         };
 
-        static readonly string[] HudTexts = { "Hint Text", "Equation Text", "Progress Text", "Feedback Text", "Question Text", "Event Text" };
+        static readonly string[] HudTexts = { "Hint Text", "Equation Text", "Progress Text", "Feedback Text", "Question Text", "Event Text", "Options Text" };
         static readonly string[] HudButtons = { "Quit Button", "Replay Button", "Menu Button" };
 
         [MenuItem("Tools/Menu/Build Menu")]
@@ -130,7 +135,17 @@ namespace IntellectualGame.EditorTools
             var uiSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             var circle = AssetDatabase.LoadAssetAtPath<Sprite>(CirclePath);
 
-            if (!File.Exists(BazaarSceneBuilder.PrefabPath)) BazaarSceneBuilder.AddToScene(mainCanvas);
+            // games that are built from code the first time: their scene objects must exist before they are packed
+            foreach (var (prefabPath, addToScene) in new (string, Action<Canvas>)[]
+            {
+                (BazaarSceneBuilder.PrefabPath, BazaarSceneBuilder.AddToScene),
+                (AlchikSceneBuilder.PrefabPath, AlchikSceneBuilder.AddToScene),
+                (KeregeSceneBuilder.PrefabPath, KeregeSceneBuilder.AddToScene),
+                (QuizSceneBuilders.ProverbPrefabPath, QuizSceneBuilders.AddProverb),
+                (ShyrdakSceneBuilder.PrefabPath, ShyrdakSceneBuilder.AddToScene),
+                (QuizSceneBuilders.ManasPrefabPath, QuizSceneBuilders.AddManas),
+            })
+                if (!File.Exists(prefabPath)) addToScene(mainCanvas);
 
             // the shell canvas (hint, quit, win panel) draws above the game canvases, the menu above everything
             mainCanvas.sortingOrder = 5;

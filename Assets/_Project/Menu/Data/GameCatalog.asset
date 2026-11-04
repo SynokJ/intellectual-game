@@ -53,7 +53,7 @@ MonoBehaviour:
     title: "\u0410\u043B\u044C\u0447\u0438\u043A"
     description: "\u0412\u044B\u0431\u0435\u0440\u0438 \u0441\u0438\u043B\u0443 \u0438 \u0443\u0433\u043E\u043B \u0431\u0440\u043E\u0441\u043A\u0430 \u0438 \u043F\u043E\u043F\u0430\u0434\u0438 \u0432 \u0446\u0435\u043B\u044C"
     accent: {r: 0.55, g: 0.75, b: 0.95, a: 1}
-    prefab: {fileID: 0}
+    prefab: {fileID: 3106625171781054586, guid: 488d9309bebb22847bbef4f2f3b96400, type: 3}
   - menuNumber: 5
     category: 1
     title: "\u041A\u04E9\u043A \u0431\u04E9\u0440\u04AF: \u043F\u0435\u0440\u0435\u0434\u0430\u0447\u0430"
@@ -71,7 +71,7 @@ MonoBehaviour:
     title: "\u041A\u0435\u0440\u0435\u0433\u0435-\u0441\u043B\u043E\u0432\u0430"
     description: "\u0421\u043E\u0431\u0435\u0440\u0438 \u0441\u043B\u043E\u0432\u043E \u0438\u0437 \u0431\u0443\u043A\u0432 \u043D\u0430 \u0440\u0435\u0448\u0451\u0442\u043A\u0435 \u043A\u0435\u0440\u0435\u0433\u0435"
     accent: {r: 0.95, g: 0.65, b: 0.7, a: 1}
-    prefab: {fileID: 0}
+    prefab: {fileID: 4016434990871078006, guid: f01d2285f44186640b6aea66ff4c26c3, type: 3}
   - menuNumber: 8
     category: 2
     title: "\u0410\u043B\u0444\u0430\u0432\u0438\u0442-\u043F\u0443\u0442\u0435\u0448\u0435\u0441\u0442\u0432\u0438\u0435"
@@ -89,7 +89,7 @@ MonoBehaviour:
     title: "\u0420\u0435\u0431\u0443\u0441-\u043F\u043E\u0441\u043B\u043E\u0432\u0438\u0446\u0430"
     description: "\u0420\u0430\u0437\u0433\u0430\u0434\u0430\u0439 \u0440\u0435\u0431\u0443\u0441 \u0438 \u043E\u0442\u043A\u0440\u043E\u0439 \u043D\u0430\u0440\u043E\u0434\u043D\u0443\u044E \u043C\u0443\u0434\u0440\u043E\u0441\u0442\u044C"
     accent: {r: 0.75, g: 0.65, b: 0.95, a: 1}
-    prefab: {fileID: 0}
+    prefab: {fileID: 7741166826522473738, guid: 1378af4a07650fa45a75f7069b22d1c3, type: 3}
   - menuNumber: 11
     category: 3
     title: "\u0417\u0430\u0433\u0430\u0434\u043A\u0438-\u0436\u043E\u043C\u043E\u043A"
@@ -107,7 +107,7 @@ MonoBehaviour:
     title: "\u0428\u044B\u0440\u0434\u0430\u043A"
     description: "\u0420\u0430\u0441\u043A\u0440\u0430\u0441\u044C \u0432\u043E\u0439\u043B\u043E\u0447\u043D\u044B\u0439 \u043A\u043E\u0432\u0451\u0440 \u043F\u043E \u043E\u0431\u0440\u0430\u0437\u0446\u0443"
     accent: {r: 0.95, g: 0.75, b: 0.5, a: 1}
-    prefab: {fileID: 0}
+    prefab: {fileID: 22470654794435009, guid: 3afb7ef5d3f05d2448743811037ac55e, type: 3}
   - menuNumber: 14
     category: 4
     title: "\u0422\u0435\u0431\u0435\u0442\u0435\u0439 \u0438 \u044D\u043B\u0435\u0447\u0435\u043A"
@@ -125,7 +125,7 @@ MonoBehaviour:
     title: "\u041C\u0430\u043D\u0430\u0441: \u043F\u0443\u0442\u044C \u0433\u0435\u0440\u043E\u044F"
     description: "\u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u043D\u0430 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u043F\u043E \u044D\u043F\u043E\u0441\u0443 \u0438 \u0432\u0435\u0434\u0438 \u0433\u0435\u0440\u043E\u044F \u0432\u043F\u0435\u0440\u0451\u0434"
     accent: {r: 0.55, g: 0.85, b: 0.8, a: 1}
-    prefab: {fileID: 0}
+    prefab: {fileID: 3909295413196610564, guid: 366a7ccd61998114b89aaeaae8be6589, type: 3}
   - menuNumber: 17
     category: 5
     title: "\u041A\u0430\u0440\u0442\u0430 \u041A\u044B\u0440\u0433\u044B\u0437\u0441\u0442\u0430\u043D\u0430"

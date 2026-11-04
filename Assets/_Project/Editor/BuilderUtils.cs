@@ -164,5 +164,105 @@ namespace IntellectualGame.EditorTools
             for (int i = 0; i < items.Count; i++)
                 property.GetArrayElementAtIndex(i).objectReferenceValue = items[i];
         }
+
+        // ---------- shared helpers of the game builders ----------
+
+        internal const string SharedSpritesFolder = "Assets/_Project/Shared/Art";
+
+        internal struct HudParts
+        {
+            public GameObject root;
+            public Transform safe;
+            public Text question, options, feedback, progress;
+        }
+
+        /// <summary>The standard game HUD: question, options, feedback and round counter inside a safe area. Starts hidden.</summary>
+        internal static HudParts StandardHud(Canvas canvas, string hudName, Font font, bool quiz)
+        {
+            var hud = new GameObject(hudName, typeof(RectTransform));
+            hud.transform.SetParent(canvas.transform, false);
+            Stretch((RectTransform)hud.transform);
+            var safe = new GameObject("Safe Area", typeof(RectTransform), typeof(IntellectualGame.Core.SafeAreaFitter));
+            safe.transform.SetParent(hud.transform, false);
+            Stretch((RectTransform)safe.transform);
+
+            var parts = new HudParts { root = hud, safe = safe.transform };
+            parts.question = BandText(safe.transform, "Question Text", font, 54, FontStyle.Bold, 130f, 150f);
+            parts.options = BandText(safe.transform, "Options Text", font, 44, FontStyle.Bold, 290f, 260f);
+            parts.feedback = BandText(safe.transform, "Feedback Text", font, 44, FontStyle.Bold, quiz ? 560f : 290f, 60f);
+            parts.progress = MakeText(safe.transform, "Progress Text", "", 40, Ink, TextAnchor.MiddleCenter, font,
+                new Vector2(1f, 1f), new Vector2(-190f, -60f), new Vector2(340f, 60f));
+            hud.SetActive(false);
+            return parts;
+        }
+
+        internal static void WireHud(IntellectualGame.Core.GameHudView view, HudParts hud) => Assign(view, so =>
+        {
+            so.FindProperty("root").objectReferenceValue = hud.root;
+            so.FindProperty("questionText").objectReferenceValue = hud.question;
+            so.FindProperty("optionsText").objectReferenceValue = hud.options;
+            so.FindProperty("feedbackText").objectReferenceValue = hud.feedback;
+            so.FindProperty("progressText").objectReferenceValue = hud.progress;
+        });
+
+        /// <summary>Removes the leftovers of an earlier build of a game from the open scene.</summary>
+        internal static void RemoveOld(string rootName, string hudName, Canvas canvas)
+        {
+            foreach (var root in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
+                if (root.name == rootName) UnityEngine.Object.DestroyImmediate(root);
+            var hud = canvas.transform.Find(hudName);
+            if (hud != null) UnityEngine.Object.DestroyImmediate(hud.gameObject);
+        }
+
+        /// <summary>Loads the asset at the path, or creates it and lets <paramref name="fill"/> set its data.</summary>
+        internal static T EnsureAsset<T>(string path, Action<SerializedObject> fill = null) where T : ScriptableObject
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<T>(path);
+            if (asset != null) return asset;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            asset = ScriptableObject.CreateInstance<T>();
+            AssetDatabase.CreateAsset(asset, path);
+            if (fill != null)
+            {
+                var so = new SerializedObject(asset);
+                fill(so);
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            EditorUtility.SetDirty(asset);
+            AssetDatabase.SaveAssets();
+            return asset;
+        }
+
+        internal static Transform Anchor(Transform parent, string name, float x, float y) => Group(name, parent, new Vector2(x, y));
+
+        internal static SpriteRenderer ShapeRenderer(Transform parent, string name, Sprite sprite, Vector2 position, Vector2 size, Color color, int order,
+            float rotation = 0f)
+        {
+            Shape(parent, name, sprite, position, size, color, order, rotation);
+            return parent.Find(name).GetComponent<SpriteRenderer>();
+        }
+
+        /// <summary>A text that stretches across the screen between margins, so it adapts to landscape and portrait.</summary>
+        internal static Text BandText(Transform parent, string name, Font font, int maxSize, FontStyle style, float top, float height)
+        {
+            const float sideMargin = 260f;
+            var text = MakeText(parent, name, "", maxSize, Ink, TextAnchor.MiddleCenter, font,
+                new Vector2(0.5f, 1f), Vector2.zero, Vector2.zero, style);
+            var rect = text.rectTransform;
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.offsetMin = new Vector2(sideMargin, -(top + height));
+            rect.offsetMax = new Vector2(-sideMargin, -top);
+
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 24;
+            text.resizeTextMaxSize = maxSize;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            return text;
+        }
+
     }
 }

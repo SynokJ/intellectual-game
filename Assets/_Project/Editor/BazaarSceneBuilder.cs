@@ -159,8 +159,6 @@ namespace IntellectualGame.EditorTools
                 Shape(cloth, "Pattern " + i, s["Square"], new Vector2(4.6f + i * 0.6f, -2.35f), new Vector2(0.18f, 0.18f), new Color(1f, 0.94f, 0.78f), 13, 45f);
         }
 
-        static Transform Anchor(Transform parent, string name, float x, float y) => Group(name, parent, new Vector2(x, y));
-
         static ItemView BuildItemTemplate(Transform parent, Dictionary<string, Sprite> s)
         {
             var root = Group("Item Template", parent, Vector2.zero);
@@ -222,35 +220,6 @@ namespace IntellectualGame.EditorTools
                 Shape(plate, "Onion " + i, s["Circle"], new Vector2(4.6f + i * 0.5f, -0.9f), new Vector2(0.24f, 0.24f), new Color(0.75f, 0.5f, 0.65f), 17);
             plate.gameObject.SetActive(false);
             return plate;
-        }
-
-        static SpriteRenderer ShapeRenderer(Transform parent, string name, Sprite sprite, Vector2 position, Vector2 size, Color color, int order)
-        {
-            Shape(parent, name, sprite, position, size, color, order);
-            return parent.Find(name).GetComponent<SpriteRenderer>();
-        }
-
-        // ---------- UI ----------
-
-        /// <summary>A text that stretches across the screen between margins, so it adapts to landscape and portrait.</summary>
-        static Text BandText(Transform parent, string name, Font font, int maxSize, FontStyle style, float top, float height)
-        {
-            const float sideMargin = 260f;
-            var text = MakeText(parent, name, "", maxSize, Ink, TextAnchor.MiddleCenter, font,
-                new Vector2(0.5f, 1f), Vector2.zero, Vector2.zero, style);
-            var rect = text.rectTransform;
-            rect.anchorMin = new Vector2(0f, 1f);
-            rect.anchorMax = new Vector2(1f, 1f);
-            rect.pivot = new Vector2(0.5f, 1f);
-            rect.offsetMin = new Vector2(sideMargin, -(top + height));
-            rect.offsetMax = new Vector2(-sideMargin, -top);
-
-            text.resizeTextForBestFit = true;
-            text.resizeTextMinSize = 24;
-            text.resizeTextMaxSize = maxSize;
-            text.horizontalOverflow = HorizontalWrapMode.Wrap;
-            text.verticalOverflow = VerticalWrapMode.Truncate;
-            return text;
         }
 
         // ---------- level data ----------
