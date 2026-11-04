@@ -93,7 +93,6 @@ namespace IntellectualGame.EditorTools
             {
                 so.FindProperty("level").objectReferenceValue = AssetDatabase.LoadAssetAtPath<YurtaLevelData>(LevelPath);
                 so.FindProperty("view").objectReferenceValue = view;
-                so.FindProperty("menuNumber").intValue = 1;
             });
             Assign(view, so =>
             {

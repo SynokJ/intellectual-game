@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using IntellectualGame.Menu;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,8 +5,8 @@ using UnityEngine.UI;
 namespace IntellectualGame.Core
 {
     /// <summary>
-    /// Manager of the currently running game. The main menu lists the games of the catalog and starts the chosen one;
-    /// while a game is running the number buttons are forwarded to it as answers.
+    /// Shell of the app: shows the main menu, spawns the prefab of the chosen game and destroys it when the player leaves.
+    /// Each game prefab brings its own world, HUD and answer pad; the shell only owns the menu, hint, quit button and win panel.
     /// </summary>
     public class GameController : MonoBehaviour
     {
@@ -15,8 +14,6 @@ namespace IntellectualGame.Core
 
         [SerializeField] GameCatalog catalog;
         [SerializeField] MainMenuView menuView;
-        [SerializeField] Game[] games;
-        [SerializeField] AnswerPadView answerPad;
         [SerializeField] Text hintText;
         [SerializeField] Button quitButton;
         [SerializeField] GameObject winPanel;
@@ -24,22 +21,12 @@ namespace IntellectualGame.Core
         [SerializeField] Button replayButton;
         [SerializeField] Button menuButton;
 
-        readonly Dictionary<int, Game> gamesByNumber = new Dictionary<int, Game>();
         State state;
         Game current;
 
         void Awake()
         {
-            foreach (var game in games)
-            {
-                if (gamesByNumber.ContainsKey(game.MenuNumber))
-                    Debug.LogWarning($"Menu number {game.MenuNumber} is used by both {gamesByNumber[game.MenuNumber].name} and {game.name}.", game);
-                else
-                    gamesByNumber.Add(game.MenuNumber, game);
-            }
-
             menuView.GameSelected += OnGameSelected;
-            answerPad.AnswerPressed += OnAnswerPressed;
             quitButton.onClick.AddListener(ShowMenu);
             menuButton.onClick.AddListener(ShowMenu);
             replayButton.onClick.AddListener(Replay);
@@ -48,32 +35,25 @@ namespace IntellectualGame.Core
         void OnDestroy()
         {
             if (menuView != null) menuView.GameSelected -= OnGameSelected;
-            if (answerPad != null) answerPad.AnswerPressed -= OnAnswerPressed;
         }
 
         void Start() => ShowMenu();
 
-        void OnGameSelected(int number)
+        void OnGameSelected(GameCatalogEntry entry)
         {
-            if (state == State.Menu && gamesByNumber.TryGetValue(number, out var game))
-                Begin(game);
-        }
+            if (state != State.Menu || !entry.IsAvailable) return;
 
-        void OnAnswerPressed(int number)
-        {
-            if (state == State.Playing) current.SubmitAnswer(number);
-        }
-
-        void Begin(Game game)
-        {
-            Release();
-            current = game;
+            current = Instantiate(entry.prefab);
+            current.name = entry.prefab.name;
             current.Finished += OnGameFinished;
-
-            state = State.Playing;
             menuView.Hide();
+            Play();
+        }
+
+        void Play()
+        {
+            state = State.Playing;
             winPanel.SetActive(false);
-            answerPad.Show(game.AnswerCount);
             quitButton.gameObject.SetActive(true);
             hintText.gameObject.SetActive(true);
             hintText.text = "Выбери правильный ответ";
@@ -82,20 +62,18 @@ namespace IntellectualGame.Core
 
         void Replay()
         {
-            if (current != null) Begin(current);
+            if (current != null) Play();
         }
 
         void ShowMenu()
         {
-            Release();
-            foreach (var game in gamesByNumber.Values) game.StopGame();
+            DestroyCurrent();
 
             state = State.Menu;
             winPanel.SetActive(false);
-            answerPad.Hide();
             quitButton.gameObject.SetActive(false);
             hintText.gameObject.SetActive(false);
-            menuView.Show(catalog, gamesByNumber.ContainsKey);
+            menuView.Show(catalog);
         }
 
         void OnGameFinished(Game game, bool won)
@@ -106,10 +84,13 @@ namespace IntellectualGame.Core
             winPanel.SetActive(true);
         }
 
-        void Release()
+        void DestroyCurrent()
         {
             if (current == null) return;
             current.Finished -= OnGameFinished;
+            current.StopGame();
+            Destroy(current.gameObject);
+            current = null;
         }
     }
 }

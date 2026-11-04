@@ -20,7 +20,29 @@ namespace IntellectualGame.EditorTools
         const string ScenePath = "Assets/Scenes/SampleScene.unity";
         const string CatalogPath = "Assets/_Project/Menu/Data/GameCatalog.asset";
         const string CirclePath = "Assets/_Project/MiniGames/Yurta/Art/Circle.png";
-        const string MarkerPath = "Library/MenuSceneBuilt_v2.txt";
+        const string MarkerPath = "Library/MenuSceneBuilt_v4.txt";
+
+        struct GameSpec
+        {
+            public string rootName, hudName, prefabPath;
+            public int menuNumber;
+            public Color padColor;
+
+            public GameSpec(string rootName, string hudName, string prefabPath, int menuNumber, Color padColor)
+            {
+                this.rootName = rootName;
+                this.hudName = hudName;
+                this.prefabPath = prefabPath;
+                this.menuNumber = menuNumber;
+                this.padColor = padColor;
+            }
+        }
+
+        static readonly GameSpec[] Specs =
+        {
+            new GameSpec("YurtaGame", "Yurta HUD", "Assets/_Project/MiniGames/Yurta/Prefabs/YurtaGame.prefab", 1, new Color(1f, 0.9f, 0.62f)),
+            new GameSpec("OtaraGame", "Otara HUD", "Assets/_Project/MiniGames/Otara/Prefabs/OtaraGame.prefab", 2, new Color(0.82f, 0.95f, 0.75f)),
+        };
 
         static readonly Color Sky = new Color(0.62f, 0.82f, 0.95f);
         static readonly Color Grass = new Color(0.42f, 0.67f, 0.31f);
@@ -70,17 +92,20 @@ namespace IntellectualGame.EditorTools
             var uiSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             var circle = AssetDatabase.LoadAssetAtPath<Sprite>(CirclePath);
 
+            // the shell canvas (hint, quit, win panel) draws above the game canvases, the menu above everything
+            mainCanvas.sortingOrder = 5;
             var menu = BuildMenu(font, uiSprite, circle);
-            var pad = BuildAnswerPad(mainCanvas, font, uiSprite);
-            StyleHud(mainCanvas, uiSprite);
+            StyleHud(mainCanvas.transform, uiSprite);
 
-            var games = UnityEngine.Object.FindObjectsByType<Game>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var prefabs = new Game[Specs.Length];
+            for (int i = 0; i < Specs.Length; i++) prefabs[i] = Pack(Specs[i], mainCanvas, scene, font, uiSprite);
+            AssignPrefabs(catalog, prefabs);
+            EnsureScenery(prefabs);
+
             Assign(controller, so =>
             {
                 so.FindProperty("catalog").objectReferenceValue = catalog;
                 so.FindProperty("menuView").objectReferenceValue = menu;
-                so.FindProperty("answerPad").objectReferenceValue = pad;
-                SetArray(so.FindProperty("games"), games);
             });
 
             var win = mainCanvas.transform.Find("Win Panel");
@@ -267,12 +292,100 @@ namespace IntellectualGame.EditorTools
             return card;
         }
 
-        // ---------- in-game: answer pad and readable HUD ----------
+        // ---------- game prefabs: world + HUD + answer pad + controller in one self-contained prefab ----------
 
-        static AnswerPadView BuildAnswerPad(Canvas mainCanvas, Font font, Sprite uiSprite)
+        /// <summary>Moves the game's scene objects into one prefab and removes them from the scene. Returns the prefab's Game.</summary>
+        static Game Pack(GameSpec spec, Canvas mainCanvas, UnityEngine.SceneManagement.Scene scene, Font font, Sprite uiSprite)
+        {
+            GameObject root = null;
+            foreach (var candidate in scene.GetRootGameObjects())
+                if (candidate.name == spec.rootName) root = candidate;
+
+            if (root == null)
+            {
+                var existing = AssetDatabase.LoadAssetAtPath<Game>(spec.prefabPath);
+                if (existing == null)
+                    Debug.LogWarning($"Menu: '{spec.rootName}' is not in the scene and {spec.prefabPath} does not exist - run its builder first.");
+                return existing;
+            }
+
+            var oldCanvas = root.transform.Find("Game Canvas");
+            if (oldCanvas != null) UnityEngine.Object.DestroyImmediate(oldCanvas.gameObject);
+
+            var canvasObject = new GameObject("Game Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            canvasObject.transform.SetParent(root.transform, false);
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 1;
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0f;
+
+            var hud = mainCanvas.transform.Find(spec.hudName);
+            if (hud != null) hud.SetParent(canvasObject.transform, false);
+
+            var pad = BuildAnswerPad(canvasObject.transform, font, uiSprite, spec.padColor);
+            var game = root.GetComponent<Game>();
+            Assign(game, so => so.FindProperty("answerPad").objectReferenceValue = pad);
+            StyleHud(canvasObject.transform, uiSprite);
+
+            Directory.CreateDirectory(Path.GetDirectoryName(spec.prefabPath));
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, spec.prefabPath);
+            UnityEngine.Object.DestroyImmediate(root);
+            return prefab.GetComponent<Game>();
+        }
+
+        /// <summary>
+        /// The sky, mountains, sun and ground used to be part of the Yurta game and were shared by Otara only because both
+        /// lived in the scene. Now every game prefab carries its own "Scenery"; this copies it into prefabs that lack one.
+        /// </summary>
+        static void EnsureScenery(Game[] prefabs)
+        {
+            Transform source = null;
+            foreach (var prefab in prefabs)
+            {
+                if (prefab == null) continue;
+                source = prefab.transform.Find("Scenery");
+                if (source != null) break;
+            }
+            if (source == null) return;
+
+            foreach (var prefab in prefabs)
+            {
+                if (prefab == null || prefab.transform.Find("Scenery") != null) continue;
+
+                string path = AssetDatabase.GetAssetPath(prefab);
+                var contents = PrefabUtility.LoadPrefabContents(path);
+                var scenery = UnityEngine.Object.Instantiate(source.gameObject, contents.transform);
+                scenery.name = "Scenery";
+                scenery.transform.SetAsFirstSibling();
+                PrefabUtility.SaveAsPrefabAsset(contents, path);
+                PrefabUtility.UnloadPrefabContents(contents);
+            }
+        }
+
+        static void AssignPrefabs(GameCatalog catalog, Game[] prefabs)
+        {
+            var so = new SerializedObject(catalog);
+            var list = so.FindProperty("entries");
+            for (int i = 0; i < list.arraySize; i++)
+            {
+                var item = list.GetArrayElementAtIndex(i);
+                int number = item.FindPropertyRelative("menuNumber").intValue;
+                for (int s = 0; s < Specs.Length; s++)
+                    if (Specs[s].menuNumber == number && prefabs[s] != null)
+                        item.FindPropertyRelative("prefab").objectReferenceValue = prefabs[s];
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(catalog);
+            AssetDatabase.SaveAssets();
+        }
+
+        static AnswerPadView BuildAnswerPad(Transform parent, Font font, Sprite uiSprite, Color buttonColor)
         {
             var padObject = new GameObject("Answer Pad", typeof(RectTransform), typeof(AnswerPadView));
-            padObject.transform.SetParent(mainCanvas.transform, false);
+            padObject.transform.SetParent(parent, false);
             Stretch((RectTransform)padObject.transform);
 
             var panel = new GameObject("Answer Panel", typeof(RectTransform), typeof(Image), typeof(GridLayoutGroup),
@@ -303,7 +416,7 @@ namespace IntellectualGame.EditorTools
 
             var template = MakeButton(panel.transform, "Answer Button Template", "", font, uiSprite,
                 new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(180f, 180f));
-            template.GetComponent<Image>().color = Cream;
+            template.GetComponent<Image>().color = buttonColor;
             var label = template.GetComponentInChildren<Text>();
             label.fontSize = 84;
             label.fontStyle = FontStyle.Bold;
@@ -319,9 +432,9 @@ namespace IntellectualGame.EditorTools
             return pad;
         }
 
-        static void StyleHud(Canvas mainCanvas, Sprite uiSprite)
+        static void StyleHud(Transform canvasRoot, Sprite uiSprite)
         {
-            foreach (var text in mainCanvas.GetComponentsInChildren<Text>(true))
+            foreach (var text in canvasRoot.GetComponentsInChildren<Text>(true))
             {
                 if (Array.IndexOf(HudTexts, text.name) < 0) continue;
                 text.color = Color.white;
@@ -329,7 +442,7 @@ namespace IntellectualGame.EditorTools
                 AddBackdrop(text, uiSprite);
             }
 
-            foreach (var image in mainCanvas.GetComponentsInChildren<Image>(true))
+            foreach (var image in canvasRoot.GetComponentsInChildren<Image>(true))
                 if (Array.IndexOf(HudButtons, image.name) >= 0) image.color = Cream;
         }
 

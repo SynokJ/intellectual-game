@@ -90,7 +90,6 @@ namespace IntellectualGame.EditorTools
             {
                 so.FindProperty("level").objectReferenceValue = AssetDatabase.LoadAssetAtPath<OtaraLevelData>(LevelPath);
                 so.FindProperty("view").objectReferenceValue = view;
-                so.FindProperty("menuNumber").intValue = 2;
             });
             Assign(view, so =>
             {

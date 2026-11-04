@@ -4,32 +4,34 @@ using UnityEngine;
 namespace IntellectualGame.Core
 {
     /// <summary>
-    /// Base class of every mini-game. Holds the abstract flow (start, answer, stop, finish);
-    /// concrete games (Controller role of MVC) implement the rules.
+    /// Base class of every mini-game. A mini-game is a self-contained prefab (world, HUD, answer pad, controller)
+    /// that the GameController spawns when it is chosen and destroys when the player leaves.
+    /// Holds the abstract flow (start, answer, stop, finish); concrete games (Controller role of MVC) implement the rules.
     /// </summary>
     public abstract class Game : MonoBehaviour
     {
-        [Tooltip("Number button (1-based) that starts this game from the menu.")]
-        [SerializeField] int menuNumber = 1;
+        protected const int MinAnswerCount = 9;
+
+        [SerializeField] AnswerPadView answerPad;
 
         public event Action<Game, bool> Finished;
 
-        public int MenuNumber => menuNumber;
-
         public bool IsRunning { get; private set; }
 
-        protected const int MinAnswerCount = 5;
-
         public abstract string Title { get; }
-
-        /// <summary>How many answer buttons (numbered from 1) the pad shows while this game runs.</summary>
-        public virtual int AnswerCount => 9;
         public virtual string WinMessage => "Победа!";
+
+        /// <summary>How many answer buttons (numbered from 1) the pad of this game shows.</summary>
+        public virtual int AnswerCount => 9;
 
         public void StartGame()
         {
             if (IsRunning) return;
             IsRunning = true;
+
+            answerPad.AnswerPressed -= SubmitAnswer;
+            answerPad.AnswerPressed += SubmitAnswer;
+            answerPad.Show(AnswerCount);
             OnGameStart();
         }
 
@@ -43,6 +45,8 @@ namespace IntellectualGame.Core
         public void StopGame()
         {
             IsRunning = false;
+            answerPad.AnswerPressed -= SubmitAnswer;
+            answerPad.Hide();
             OnGameStop();
         }
 
@@ -50,6 +54,7 @@ namespace IntellectualGame.Core
         {
             if (!IsRunning) return;
             IsRunning = false;
+            answerPad.AnswerPressed -= SubmitAnswer;
             Finished?.Invoke(this, won);
         }
 

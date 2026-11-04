@@ -20,8 +20,9 @@ namespace IntellectualGame.Menu
 
         float restAlpha = 1f;
 
-        public void Bind(GameCatalogEntry entry, bool available, Action<int> onClick)
+        public void Bind(GameCatalogEntry entry, Action<GameCatalogEntry> onClick)
         {
+            bool available = entry.IsAvailable;
             background.color = entry.accent;
             numberText.text = entry.menuNumber.ToString();
             titleText.text = entry.title;
@@ -33,7 +34,7 @@ namespace IntellectualGame.Menu
             group.alpha = restAlpha;
 
             button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(() => onClick(entry.menuNumber));
+            button.onClick.AddListener(() => onClick(entry));
         }
 
         public void PlayAppear(float delay)

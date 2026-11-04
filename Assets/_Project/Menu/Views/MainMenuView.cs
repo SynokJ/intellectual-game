@@ -18,11 +18,11 @@ namespace IntellectualGame.Menu
 
         readonly List<GameCardView> cards = new List<GameCardView>();
 
-        public event Action<int> GameSelected;
+        public event Action<GameCatalogEntry> GameSelected;
 
         void Awake() => cardTemplate.gameObject.SetActive(false);
 
-        public void Show(GameCatalog catalog, Func<int, bool> isAvailable)
+        public void Show(GameCatalog catalog)
         {
             titleText.text = catalog.MenuTitle;
             subtitleText.text = catalog.MenuSubtitle;
@@ -35,7 +35,7 @@ namespace IntellectualGame.Menu
                 var card = Instantiate(cardTemplate, cardContainer);
                 card.name = "Game Card " + entry.menuNumber;
                 card.gameObject.SetActive(true);
-                card.Bind(entry, isAvailable(entry.menuNumber), number => GameSelected?.Invoke(number));
+                card.Bind(entry, selected => GameSelected?.Invoke(selected));
                 card.PlayAppear(i * CardStagger);
                 cards.Add(card);
             }

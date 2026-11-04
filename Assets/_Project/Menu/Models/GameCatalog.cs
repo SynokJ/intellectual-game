@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using IntellectualGame.Core;
 using UnityEngine;
 
 namespace IntellectualGame.Menu
@@ -7,14 +8,18 @@ namespace IntellectualGame.Menu
     [Serializable]
     public struct GameCatalogEntry
     {
-        [Tooltip("Matches Game.MenuNumber of the mini-game. An entry without a matching game is shown as 'coming soon'.")]
+        [Tooltip("Number shown on the card.")]
         public int menuNumber;
         public string title;
         [TextArea] public string description;
         public Color accent;
+        [Tooltip("Self-contained game prefab (world, HUD, answer pad, controller). Empty = shown as 'coming soon'.")]
+        public Game prefab;
+
+        public bool IsAvailable => prefab != null;
     }
 
-    /// <summary>Model: what the main menu shows - its headings and one card per game.</summary>
+    /// <summary>Model: what the main menu shows - its headings and one card per game, each pointing at its game prefab.</summary>
     [CreateAssetMenu(menuName = "Game/Catalog", fileName = "GameCatalog")]
     public class GameCatalog : ScriptableObject
     {
