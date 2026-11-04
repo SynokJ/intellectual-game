@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d817960dfd8f1054bbed5148f339cc3d, type: 3}
+  m_Name: OtaraLevel01
+  m_EditorClassIdentifier: Assembly-CSharp::IntellectualGame.Otara.OtaraLevelData
+  rounds:
+  - kind: 0
+    startCount: 0
+    moves: 03000000i
+    families: 0
+  - kind: 0
+    startCount: 2
+    moves: 04000000i
+    families: 0
+  - kind: 0
+    startCount: 7
+    moves: fdffffffi
+    families: 0
+  - kind: 0
+    startCount: 3
+    moves: 04000000feffffffi
+    families: 0
+  - kind: 1
+    startCount: 6
+    moves: 
+    families: 2
+  - kind: 1
+    startCount: 6
+    moves: 
+    families: 3
