@@ -23,7 +23,7 @@ namespace IntellectualGame.Otara
             awaitingAnswer = false;
 
             if (state == null) state = ScriptableObject.CreateInstance<OtaraState>();
-            state.Begin(level.Rounds.Count);
+            state.Begin(level.CreateRun());
 
             view.ResetView();
             view.SetVisible(true);
@@ -34,7 +34,7 @@ namespace IntellectualGame.Otara
         {
             if (!awaitingAnswer) return;
 
-            if (value == level.Rounds[state.Index].Answer)
+            if (value == state.Current.Answer)
             {
                 awaitingAnswer = false;
                 StartCoroutine(HandleCorrect());
@@ -56,7 +56,7 @@ namespace IntellectualGame.Otara
 
         IEnumerator PlayRound()
         {
-            var round = level.Rounds[state.Index];
+            var round = state.Current;
             view.PrepareRound(round, state.Index + 1, state.Total);
             yield return new WaitForSeconds(0.8f);
 

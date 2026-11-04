@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace IntellectualGame.Otara
@@ -5,14 +6,17 @@ namespace IntellectualGame.Otara
     /// <summary>Model (runtime state): created once and reset for every run so the level asset is never modified.</summary>
     public class OtaraState : ScriptableObject
     {
-        public int Index { get; private set; }
-        public int Total { get; private set; }
-        public int Mistakes { get; private set; }
-        public bool IsComplete => Index >= Total;
+        List<OtaraRound> rounds = new List<OtaraRound>();
 
-        public void Begin(int total)
+        public int Index { get; private set; }
+        public int Mistakes { get; private set; }
+        public int Total => rounds.Count;
+        public bool IsComplete => Index >= Total;
+        public OtaraRound Current => rounds[Index];
+
+        public void Begin(List<OtaraRound> run)
         {
-            Total = total;
+            rounds = run;
             Index = 0;
             Mistakes = 0;
         }
