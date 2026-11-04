@@ -46,7 +46,7 @@ namespace IntellectualGame.EditorTools
             var oldHud = mainCanvas.transform.Find("Bazaar HUD");
             if (oldHud != null) Object.DestroyImmediate(oldHud.gameObject);
 
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var font = AppFont();
 
             // HUD (the menu builder moves it into the game's own canvas)
             var hud = new GameObject("Bazaar HUD", typeof(RectTransform));

@@ -55,7 +55,7 @@ namespace IntellectualGame.EditorTools
             var level = QuizLevel(ManasLevelPath, "Манас: путь героя", "Герой дошёл до юрты!", ManasQuestions);
 
             RemoveOld("ManasGame", "Manas HUD", mainCanvas);
-            var hud = StandardHud(mainCanvas, "Manas HUD", Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), true);
+            var hud = StandardHud(mainCanvas, "Manas HUD", AppFont(), true);
 
             var world = new GameObject("ManasGame");
             var stageObject = new GameObject("Stage");
@@ -104,7 +104,7 @@ namespace IntellectualGame.EditorTools
             var level = QuizLevel(ProverbLevelPath, "Ребус-пословица", "Вся народная мудрость собрана!", ProverbQuestions);
 
             RemoveOld("ProverbGame", "Proverb HUD", mainCanvas);
-            var hud = StandardHud(mainCanvas, "Proverb HUD", Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), true);
+            var hud = StandardHud(mainCanvas, "Proverb HUD", AppFont(), true);
 
             var world = new GameObject("ProverbGame");
             var stageObject = new GameObject("Stage");

@@ -10,6 +10,14 @@ namespace IntellectualGame.EditorTools
     /// <summary>Helpers shared by the per-game scene builders: primitive shapes, sprites, UI widgets, serialization.</summary>
     internal static class BuilderUtils
     {
+        const string FontPath = "Assets/_Project/Shared/Fonts/Inter-Regular.ttf";
+
+        /// <summary>
+        /// The font of all UI text. Unity's built-in font has no Cyrillic glyphs in a WebGL build (there are no OS fonts to
+        /// fall back to), so the project embeds Inter, which covers Russian and the Kyrgyz letters ң, ө, ү.
+        /// </summary>
+        internal static Font AppFont() => AssetDatabase.LoadAssetAtPath<Font>(FontPath);
+
         internal static readonly Color Ink = new Color(0.12f, 0.16f, 0.27f);
 
         internal static Transform Group(string name, Transform parent, Vector2 center)

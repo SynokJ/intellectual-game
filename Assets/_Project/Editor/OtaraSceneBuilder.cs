@@ -54,7 +54,7 @@ namespace IntellectualGame.EditorTools
 
             RemoveOld(scene, canvas);
 
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var font = AppFont();
 
             // HUD
             var hud = new GameObject("Otara HUD", typeof(RectTransform));

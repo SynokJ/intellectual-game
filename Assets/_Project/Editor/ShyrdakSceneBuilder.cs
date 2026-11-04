@@ -27,7 +27,7 @@ namespace IntellectualGame.EditorTools
             var level = EnsureAsset<ShyrdakLevelData>(LevelPath);
 
             RemoveOld("ShyrdakGame", "Shyrdak HUD", mainCanvas);
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var font = AppFont();
             var hud = StandardHud(mainCanvas, "Shyrdak HUD", font, false);
 
             // palette row under the question

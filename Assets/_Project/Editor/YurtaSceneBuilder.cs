@@ -51,7 +51,7 @@ namespace IntellectualGame.EditorTools
             var canvas = FindMainCanvas();
             if (canvas == null) throw new InvalidOperationException("Canvas not found in SampleScene.");
 
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var font = AppFont();
             var uiSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
 
             // HUD

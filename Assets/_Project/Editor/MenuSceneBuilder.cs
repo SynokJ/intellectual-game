@@ -131,7 +131,7 @@ namespace IntellectualGame.EditorTools
                 if (oldObject != null) UnityEngine.Object.DestroyImmediate(oldObject.gameObject);
             }
 
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var font = AppFont();
             var uiSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             var circle = AssetDatabase.LoadAssetAtPath<Sprite>(CirclePath);
 

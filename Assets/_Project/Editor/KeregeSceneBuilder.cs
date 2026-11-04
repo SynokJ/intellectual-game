@@ -43,7 +43,7 @@ namespace IntellectualGame.EditorTools
             });
 
             RemoveOld("KeregeGame", "Kerege HUD", mainCanvas);
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var font = AppFont();
             var uiSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
             var hud = StandardHud(mainCanvas, "Kerege HUD", font, false);
 

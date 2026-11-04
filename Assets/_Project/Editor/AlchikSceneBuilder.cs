@@ -25,7 +25,7 @@ namespace IntellectualGame.EditorTools
             var s = CreateSprites(SharedSpritesFolder);
             var level = EnsureAsset<AlchikLevelData>(LevelPath);
             RemoveOld("AlchikGame", "Alchik HUD", mainCanvas);
-            var hud = StandardHud(mainCanvas, "Alchik HUD", Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), false);
+            var hud = StandardHud(mainCanvas, "Alchik HUD", AppFont(), false);
 
             var world = new GameObject("AlchikGame");
             var stageObject = new GameObject("Stage");
