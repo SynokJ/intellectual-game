@@ -23,7 +23,7 @@ namespace IntellectualGame.Yurta
             busy = false;
 
             if (state == null) state = ScriptableObject.CreateInstance<YurtaState>();
-            state.Begin(level.Equations.Count);
+            state.Begin(level.CreateRun());
 
             view.ResetView();
             view.SetHudVisible(true);
@@ -34,7 +34,7 @@ namespace IntellectualGame.Yurta
         {
             if (busy) return;
 
-            if (value == level.Equations[state.Index].Answer)
+            if (value == state.Current.Answer)
             {
                 StartCoroutine(HandleCorrect());
             }
@@ -74,6 +74,6 @@ namespace IntellectualGame.Yurta
         }
 
         void ShowCurrentEquation() =>
-            view.ShowEquation(level.Equations[state.Index].Text, state.Index + 1, state.Total);
+            view.ShowEquation(state.Current.Text, state.Index + 1, state.Total);
     }
 }

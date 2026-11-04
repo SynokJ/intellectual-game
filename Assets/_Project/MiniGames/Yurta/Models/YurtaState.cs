@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace IntellectualGame.Yurta
@@ -5,14 +6,17 @@ namespace IntellectualGame.Yurta
     /// <summary>Model (runtime state): created fresh for every run so the level asset is never modified.</summary>
     public class YurtaState : ScriptableObject
     {
-        public int Index { get; private set; }
-        public int Total { get; private set; }
-        public int Mistakes { get; private set; }
-        public bool IsComplete => Index >= Total;
+        List<YurtaEquation> equations = new List<YurtaEquation>();
 
-        public void Begin(int total)
+        public int Index { get; private set; }
+        public int Mistakes { get; private set; }
+        public int Total => equations.Count;
+        public bool IsComplete => Index >= Total;
+        public YurtaEquation Current => equations[Index];
+
+        public void Begin(List<YurtaEquation> run)
         {
-            Total = total;
+            equations = run;
             Index = 0;
             Mistakes = 0;
         }
